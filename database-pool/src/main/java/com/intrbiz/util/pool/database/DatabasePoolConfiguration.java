@@ -37,6 +37,7 @@ public class DatabasePoolConfiguration extends Configuration
     
     public DatabasePoolConfiguration()
     {
+        super();
     }
 
     @XmlElement(name="driver")
