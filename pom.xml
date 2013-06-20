@@ -57,5 +57,6 @@
 		<module>compiler</module>
 		<module>database-pool</module>
 		<module>queue</module>
-	</modules>
+    <module>data-manager</module>
+  </modules>
 </project>
