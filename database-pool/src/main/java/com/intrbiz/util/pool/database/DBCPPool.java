@@ -10,6 +10,9 @@ import org.apache.commons.pool.impl.GenericKeyedObjectPoolFactory;
 import org.apache.commons.pool.impl.GenericObjectPool;
 
 import com.intrbiz.Util;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Gauge;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class DBCPPool implements DatabasePool
@@ -23,6 +26,12 @@ public class DBCPPool implements DatabasePool
     protected KeyedObjectPoolFactory statementPool;
 
     protected PoolableConnectionFactory poolableConnectionFactory;
+    
+    protected Counter borrowedConnections;
+    
+    protected Gauge<Integer> activeConnections;
+    
+    protected Gauge<Integer> idleConnections;
 
     @Override
     public void close()
@@ -39,6 +48,8 @@ public class DBCPPool implements DatabasePool
     @Override
     public Connection connect() throws Exception
     {
+        if (this.borrowedConnections != null)
+            this.borrowedConnections.inc();
         return (Connection) this.connectionPool.borrowObject();
     }
 
@@ -73,6 +84,23 @@ public class DBCPPool implements DatabasePool
         this.statementPool = new GenericKeyedObjectPoolFactory(null);
         // connections tested before use with 'SELECT 1';
         this.poolableConnectionFactory = new PoolableConnectionFactory(this.connectionFactory, this.connectionPool, this.statementPool, this.cfg.getValidationSql(), false, true);
+        // metrics
+        String scope = this.cfg.getUsername() + "@" + this.cfg.getUrl();
+        this.borrowedConnections = Metrics.newCounter(DatabasePool.class, "borrowed-connections", scope);
+        this.activeConnections = Metrics.newGauge(DatabasePool.class, "active-connections", scope, new Gauge<Integer>(){
+            @Override
+            public Integer value()
+            {
+                return connectionPool.getNumActive();
+            }
+        });
+        this.idleConnections = Metrics.newGauge(DatabasePool.class, "idle-connections", scope, new Gauge<Integer>(){
+            @Override
+            public Integer value()
+            {
+                return connectionPool.getNumIdle();
+            }
+        }); 
     }
 
     @Override
