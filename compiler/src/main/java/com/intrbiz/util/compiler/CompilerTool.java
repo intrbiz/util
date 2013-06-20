@@ -14,6 +14,10 @@ import javax.tools.ToolProvider;
 
 import org.apache.log4j.Logger;
 
+/**
+ * A rather poor and primitive wrapper to the JDK (6) Tools API.
+ * Making it simple to compile and load a Java class at Runtime.
+ */
 public final class CompilerTool
 {
     private static final CompilerTool TOOL = new CompilerTool();
@@ -41,7 +45,7 @@ public final class CompilerTool
         //
         try
         {
-            this.base = Files.createTempDirectory("balsa-rt-classes-").toFile();
+            this.base = Files.createTempDirectory("intrbiz-rt-classes-").toFile();
             logger.trace("Using " + this.base + " as compilation directory");
             this.fileManager.setLocation(StandardLocation.CLASS_OUTPUT, Arrays.asList(new File[]{ this.base }));
         }
