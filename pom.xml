@@ -58,5 +58,6 @@
 		<module>database-pool</module>
 		<module>queue</module>
     <module>data-manager</module>
+    <module>crypto</module>
   </modules>
 </project>
