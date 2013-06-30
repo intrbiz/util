@@ -2,6 +2,8 @@ package com.intrbiz.crypto;
 
 import java.security.SecureRandom;
 
+import org.apache.commons.codec.binary.Base64;
+
 public final class SecretKey
 {
     private final byte[] key;
@@ -23,7 +25,7 @@ public final class SecretKey
     
     public String toString()
     {
-        return "";
+        return Base64.encodeBase64String(this.key);
     }
     
     public static final SecretKey fromBytes(byte[] key)
@@ -33,13 +35,18 @@ public final class SecretKey
     
     public static final SecretKey fromString(String s)
     {
-        return new SecretKey(null);
+        return new SecretKey(Base64.decodeBase64(s));
+    }
+    
+    public static final SecretKey generate(int len)
+    {
+        byte[] b = new byte[len];
+        new SecureRandom().nextBytes(b);
+        return new SecretKey(b);
     }
     
     public static final SecretKey generate()
     {
-        byte[] b = new byte[32];
-        new SecureRandom().nextBytes(b);
-        return new SecretKey(b);
+        return generate(128);
     }
 }
