@@ -115,7 +115,8 @@ public class CryptoCookie
     
     public String toString()
     {
-        return Base64.encodeBase64String(this.toBytes());
+        String s = Base64.encodeBase64String(this.toBytes());
+        return s;
     }
 
     public static CryptoCookie fromBytes(byte[] data) throws IOException
@@ -128,7 +129,7 @@ public class CryptoCookie
             long flags = buffer.getLong();
             int tknLen = buffer.getInt();
             if (tknLen > buffer.remaining()) throw new IOException("Malformed CryptoCookie");
-            if (tknLen <= 0) throw new IOException("Malformed CryptoCookie");
+            if (tknLen < 0) throw new IOException("Malformed CryptoCookie");
             int sigLen = buffer.remaining() - tknLen;
             if (sigLen <= 0) throw new IOException("Malformed CryptoCookie");
             //
@@ -141,10 +142,12 @@ public class CryptoCookie
         }
         catch (IOException e)
         {
+            e.printStackTrace();
             throw e;
         }
         catch (Exception e)
         {
+            e.printStackTrace();
             throw new IOException("Malformed CryptoCookie", e);
         }
     }
