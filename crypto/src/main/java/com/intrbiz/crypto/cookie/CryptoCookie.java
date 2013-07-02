@@ -47,9 +47,34 @@ public class CryptoCookie
         return expiryTime;
     }
 
+    /**
+     * Has the cookie expired?
+     * 
+     * The cookie expires if the encoded expiry time is before the current system time (in Unix time).
+     * 
+     * A cookie with a negative expiry time never expires.
+     * 
+     * Note:
+     *   isActive() != isExpired()
+     */
     public boolean isExpired()
     {
-        return this.expiryTime < System.currentTimeMillis();
+        return this.expiryTime < System.currentTimeMillis() && this.expiryTime >= 0;
+    }
+    
+    /**
+     * Is the cookie still active?
+     * 
+     * The cookie is active if the encoded expiry time is after the current system time (in Unix time).
+     * 
+     * A cookie with a negative expiry time is always active
+     * 
+     * Note:
+     *   isActive() != isExpired()
+     */
+    public boolean isActive()
+    {
+        return this.expiryTime < 0 || this.expiryTime >= System.currentTimeMillis();
     }
 
     public long getFlags()
@@ -78,6 +103,10 @@ public class CryptoCookie
 
     //
 
+    /**
+     * Sign this cookie with the given key
+     * @param key - the key to sign with
+     */
     public void sign(SecretKey key)
     {
         if (this.signatue == null)
@@ -86,10 +115,29 @@ public class CryptoCookie
         }
     }
 
-    public boolean verify(SecretKey key)
+    /**
+     * Verify that this cookie was signed by the given key
+     * @param key - the key to verify against
+     * @return
+     */
+    public boolean verifySignature(SecretKey key)
     {
         byte[] sig = sha256(this.packData(), key.asBytes());
         return Arrays.equals(this.signatue, sig);
+    }
+    
+    /**
+     * Verify that this cookie was signed by the given key and that this cookie is active
+     * 
+     * This is the same as:
+     *   cookie.verifySignature(key) && cookie.isActive();
+     * 
+     * @param key - the key to verify against
+     * @return
+     */
+    public boolean verify(SecretKey key)
+    {
+        return this.verifySignature(key) && this.isActive();
     }
 
     /*
