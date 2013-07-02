@@ -23,6 +23,9 @@ public class CryptoCookie
     public CryptoCookie(long expiryTime, long flags, byte[] token)
     {
         super();
+        //
+        if (token == null) token = new byte[0];
+        //
         this.expiryTime = expiryTime;
         this.flags = flags;
         this.token = token;
@@ -30,10 +33,7 @@ public class CryptoCookie
 
     public CryptoCookie(long expiryTime, long flags, byte[] token, byte[] signature)
     {
-        super();
-        this.expiryTime = expiryTime;
-        this.flags = flags;
-        this.token = token;
+        this(expiryTime, flags, token);
         this.signatue = signature;
     }
 
@@ -108,15 +108,14 @@ public class CryptoCookie
         buffer.putLong(this.flags);
         buffer.putInt(this.token.length);
         buffer.put(this.token);
-        buffer.put(this.signatue);
+        if (this.signatue != null) buffer.put(this.signatue);
         //
         return data;
     }
     
     public String toString()
     {
-        String s = Base64.encodeBase64String(this.toBytes());
-        return s;
+        return Base64.encodeBase64String(this.toBytes());
     }
 
     public static CryptoCookie fromBytes(byte[] data) throws IOException
@@ -131,7 +130,8 @@ public class CryptoCookie
             if (tknLen > buffer.remaining()) throw new IOException("Malformed CryptoCookie");
             if (tknLen < 0) throw new IOException("Malformed CryptoCookie");
             int sigLen = buffer.remaining() - tknLen;
-            if (sigLen <= 0) throw new IOException("Malformed CryptoCookie");
+            if (sigLen < 0) throw new IOException("Malformed CryptoCookie");
+            if (sigLen == 0) throw new IOException("Unsigned CryptoCookie");
             //
             byte[] token = new byte[tknLen];
             buffer.get(token);
@@ -161,7 +161,7 @@ public class CryptoCookie
 
     private int length()
     {
-        return this.dataLength() + this.signatue.length;
+        return this.dataLength() + (this.signatue == null ? 0 : this.signatue.length);
     }
 
     private int dataLength()
