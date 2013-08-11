@@ -5,6 +5,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 import javax.tools.JavaCompiler;
 import javax.tools.JavaFileObject;
@@ -13,6 +15,8 @@ import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
 
 import org.apache.log4j.Logger;
+
+import com.intrbiz.util.compiler.model.JavaClass;
 
 /**
  * A rather poor and primitive wrapper to the JDK (6) Tools API.
@@ -47,7 +51,16 @@ public final class CompilerTool
         {
             this.base = Files.createTempDirectory("intrbiz-rt-classes-").toFile();
             logger.trace("Using " + this.base + " as compilation directory");
+            // set the output directory
             this.fileManager.setLocation(StandardLocation.CLASS_OUTPUT, Arrays.asList(new File[]{ this.base }));
+            // append our output directory to the compiler class path
+            List<File> classPath = new LinkedList<File>();
+            for (File file : this.fileManager.getLocation(StandardLocation.CLASS_PATH))
+            {
+                classPath.add(file);
+            }
+            classPath.add(this.base);
+            this.fileManager.setLocation(StandardLocation.CLASS_PATH, classPath);
         }
         catch (IOException e)
         {
@@ -92,5 +105,10 @@ public final class CompilerTool
             return this.loader.loadClass(className);
         }
         return null;
+    }
+    
+    public synchronized Class<?> defineClass(JavaClass jCls) throws ClassNotFoundException
+    {
+        return this.defineClass(jCls.getCanonicalName(), jCls.toJava(""));
     }
 }
