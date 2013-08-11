@@ -12,6 +12,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import com.intrbiz.data.DataException;
 import com.intrbiz.data.DataManager.DatabaseAdapterFactory;
@@ -171,6 +172,7 @@ public class DatabaseAdapterCompiler
         impl.addImport(PreparedStatement.class.getCanonicalName());
         impl.addImport(ResultSet.class.getCanonicalName());
         impl.addImport(SQLException.class.getCanonicalName());
+        impl.addImport(UUID.class.getCanonicalName());
         // super class
         impl.setSuperClass(cls.getSimpleName());
         // default constructor

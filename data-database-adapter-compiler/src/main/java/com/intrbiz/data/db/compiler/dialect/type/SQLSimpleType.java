@@ -1,6 +1,6 @@
 package com.intrbiz.data.db.compiler.dialect.type;
 
-public final class SQLSimpleType implements SQLType
+public class SQLSimpleType implements SQLType
 {
     private final String sqlType;
     

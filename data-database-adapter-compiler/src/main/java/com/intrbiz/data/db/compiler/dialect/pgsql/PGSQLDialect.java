@@ -3,9 +3,11 @@ package com.intrbiz.data.db.compiler.dialect.pgsql;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.annotation.Annotation;
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
@@ -35,21 +37,38 @@ public class PGSQLDialect implements SQLDialect
     private static final SQLType TYPE_INTEGER = new SQLSimpleType("INTEGER", "Int", int.class, Integer.class);
 
     private static final SQLType TYPE_BIGINT = new SQLSimpleType("BIGINT", "Long", long.class, Long.class);
-    
+
     private static final SQLType TYPE_FLOAT = new SQLSimpleType("REAL", "Float", float.class, Float.class);
-    
+
     private static final SQLType TYPE_DOUBLE = new SQLSimpleType("DOUBLE PRECISION", "Double", double.class, Double.class);
-    
+
+    private static final SQLType TYPE_BOOLEAN = new SQLSimpleType("BOOLEAN", "Boolean", boolean.class, Boolean.class);
+
+    private static final SQLType TYPE_DATE = new SQLSimpleType("DATE", "Date", Date.class, Date.class);
+
     private static final SQLType TYPE_TIMESTAMP = new SQLSimpleType("TIMESTAMP WITH TIME ZONE", "Timestamp", Timestamp.class);
-    
+
+    private static final SQLType TYPE_UUID = new SQLSimpleType("UUID", "String", UUID.class)
+    {
+        public String setBinding(String p, int idx, String value)
+        {
+            return p + "stmt.setString(" + idx + ", " + value + " == null ? null : " + value + ".toString());\r\n";
+        }
+
+        public String getBinding(int idx)
+        {
+            return "rs.getString(" + idx + ") == null ? null : UUID.fromString(rs.getString(" + idx + "))";
+        }
+    };
+
     //
-    
+
     private Map<Class<? extends Annotation>, SQLFunctionGenerator> functionGenerators = new IdentityHashMap<Class<? extends Annotation>, SQLFunctionGenerator>();
 
     //
-    
+
     private String owner = "postgres";
-    
+
     public PGSQLDialect()
     {
         super();
@@ -58,20 +77,20 @@ public class PGSQLDialect implements SQLDialect
         this.registerFunctionGenerator(SQLSetter.class, new SetterGenerator());
         this.registerFunctionGenerator(SQLRemove.class, new RemoveGenerator());
     }
-    
+
     @Override
     public void registerFunctionGenerator(Class<? extends Annotation> type, SQLFunctionGenerator generator)
     {
         this.functionGenerators.put(type, generator);
     }
-    
+
     protected SQLFunctionGenerator getFunctionGenerator(Class<? extends Annotation> type)
     {
         return this.functionGenerators.get(type);
     }
-    
+
     //
-    
+
     @Override
     public String getDialectName()
     {
@@ -91,19 +110,31 @@ public class PGSQLDialect implements SQLDialect
     {
         this.owner = owner;
     }
-    
+
     //
 
     @Override
     public SQLType getType(Class<?> javaClass)
     {
-        if (String.class == javaClass) return TYPE_TEXT;
-        else if (int.class == javaClass || Integer.class == javaClass) return TYPE_INTEGER;
-        else if (long.class == javaClass || Long.class == javaClass) return TYPE_BIGINT;
-        else if (float.class == javaClass || Float.class == javaClass) return TYPE_FLOAT;
-        else if (double.class == javaClass || Double.class == javaClass) return TYPE_DOUBLE;
-        else if (Timestamp.class == javaClass) return TYPE_TIMESTAMP;
-        return TYPE_TEXT;
+        if (String.class == javaClass)
+            return TYPE_TEXT;
+        else if (int.class == javaClass || Integer.class == javaClass)
+            return TYPE_INTEGER;
+        else if (long.class == javaClass || Long.class == javaClass)
+            return TYPE_BIGINT;
+        else if (float.class == javaClass || Float.class == javaClass)
+            return TYPE_FLOAT;
+        else if (double.class == javaClass || Double.class == javaClass)
+            return TYPE_DOUBLE;
+        else if (boolean.class == javaClass || Boolean.class == javaClass)
+            return TYPE_BOOLEAN;
+        else if (Timestamp.class == javaClass) 
+            return TYPE_TIMESTAMP;
+        else if (Date.class == javaClass) 
+            return TYPE_DATE;
+        else if (UUID.class == javaClass) 
+            return TYPE_UUID;
+        throw new RuntimeException("Cannot get SQL type for java class: " + javaClass.getCanonicalName());
     }
 
     //
@@ -158,20 +189,25 @@ public class PGSQLDialect implements SQLDialect
         to.writeln();
         to.flush();
     }
-    
+
     protected String writeForeignKeyAction(Action a)
     {
-        if (Action.CASCADE == a) return "CASCASE";
-        else if (Action.RESTRICT == a) return "RESTRICT";
-        else if (Action.SET_DEFAULT == a) return "SET DEFAULT";
+        if (Action.CASCADE == a)
+            return "CASCADE";
+        else if (Action.RESTRICT == a)
+            return "RESTRICT";
+        else if (Action.SET_DEFAULT == a)
+            return "SET DEFAULT";
         else if (Action.SET_NULL == a) return "SET NULL";
         return "NO ACTION";
     }
-    
+
     protected String writeForeignKeyDeferable(Deferable d)
     {
-        if (Deferable.DEFERRABLE == d) return "DEFERRABLE";
-        else if (Deferable.INITIALLY_IMMEDIATE == d) return "INITIALLY IMMEDIATE";
+        if (Deferable.DEFERRABLE == d)
+            return "DEFERRABLE";
+        else if (Deferable.INITIALLY_IMMEDIATE == d)
+            return "INITIALLY IMMEDIATE";
         else if (Deferable.INITIALLY_DEFERRED == d) return "INITIALLY DEFERRED";
         return "NOT DEFERRABLE";
     }
@@ -197,7 +233,7 @@ public class PGSQLDialect implements SQLDialect
         to.writeln();
         to.flush();
     }
-    
+
     @Override
     public void writeCreateFunction(SQLWriter to, Function function) throws IOException
     {
@@ -239,7 +275,7 @@ public class PGSQLDialect implements SQLDialect
         to.writeln();
         to.flush();
     }
-    
+
     public String functionBindingSQL(Function function)
     {
         StringWriter sw = new StringWriter();
