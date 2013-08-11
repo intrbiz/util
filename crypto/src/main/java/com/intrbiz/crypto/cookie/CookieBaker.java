@@ -8,6 +8,33 @@ import com.intrbiz.crypto.cookie.CryptoCookie.Flag;
 
 public class CookieBaker
 {
+    /**
+     * Syntactic Sugar expiry time helper
+     * 
+     * Eg:
+     *   baker.bake(Expires.never());
+     *   baker.bake(Expires.after(1, TimeUnit.HOUR));
+     *   baker.bake(Expires.after(120, TimeUnit.MINUTE));
+     */
+    public static final class Expires
+    {
+        /**
+         * The cookie never expires
+         */
+        public static final long never()
+        {
+            return -1;
+        }
+        
+        /**
+         * The cookie expires after the given length of time
+         */
+        public static final long after(long value, TimeUnit unit)
+        {
+            return System.currentTimeMillis() + unit.toMillis(value);
+        }
+    }
+    
     private SecretKey key;
     
     private long lifetime = TimeUnit.MINUTES.toMillis(60);
@@ -150,5 +177,10 @@ public class CookieBaker
     public boolean verify(CryptoCookie cookie)
     {
         return cookie.verify(this.key);
+    }
+    
+    public boolean verifySignature(CryptoCookie cookie)
+    {
+        return cookie.verifySignature(this.key);
     }
 }
