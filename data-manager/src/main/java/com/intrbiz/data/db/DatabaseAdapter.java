@@ -57,12 +57,31 @@ public abstract class DatabaseAdapter implements DataAdapter
         this.connection = connection;
     }
 
+    /**
+     * Get the name of the database schema, 
+     * this will query the name from the database
+     */
     @Override
     public final String getName()
     {
         return this._getDatabaseModuleName();
     }
     
+    /**
+     * Check if this adapters schema is installed in the database,
+     * by checking that the adapter can get the name from the database
+     * @return
+     */
+    public boolean isInstalled()
+    {
+        return this.getName() != null;
+    }
+    
+    /**
+     * Get the version of the database schema,
+     * this will query the version from the database
+     * @return
+     */
     public final String getVersion()
     {
         return this._getDatabaseModuleVersion();
