@@ -50,7 +50,7 @@ import com.intrbiz.data.Transaction;
  */
 public abstract class DatabaseAdapter implements DataAdapter
 {
-    protected DatabaseConnection connection;
+    protected final DatabaseConnection connection;
 
     protected DatabaseAdapter(DatabaseConnection connection)
     {
@@ -103,7 +103,6 @@ public abstract class DatabaseAdapter implements DataAdapter
             try
             {
                 this.connection.close();
-                this.connection = null;
             }
             finally
             {
@@ -120,8 +119,14 @@ public abstract class DatabaseAdapter implements DataAdapter
     {
     }
     
-    public void execute(final Transaction transaction) throws DataException
+    /**
+     * Execute the given transaction
+     * 
+     * @param transaction
+     * @throws DataException
+     */
+    public final void execute(final Transaction transaction) throws DataException
     {
-        transaction.run();
+        this.connection.execute(transaction);
     }
 }

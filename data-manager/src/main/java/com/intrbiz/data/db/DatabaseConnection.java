@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 import com.intrbiz.data.DataException;
+import com.intrbiz.data.Transaction;
 import com.intrbiz.util.pool.database.DatabasePool;
 
 public class DatabaseConnection implements AutoCloseable
@@ -200,6 +201,7 @@ public class DatabaseConnection implements AutoCloseable
 
     /**
      * Execute something
+     * 
      * @param call
      * @return
      * @throws DataException
@@ -222,8 +224,28 @@ public class DatabaseConnection implements AutoCloseable
     }
 
     /**
+     * Execute the given transaction
+     * 
+     * @param transaction
+     * @throws DataException
+     */
+    public void execute(final Transaction transaction) throws DataException
+    {
+        this.begin();
+        try
+        {
+            transaction.run();
+            this.commit();
+        }
+        finally
+        {
+            this.end();
+        }
+    }
+
+    /**
      * Simple callback interface
-     *
+     * 
      * @param <T>
      */
     public static interface DatabaseCall<T>
