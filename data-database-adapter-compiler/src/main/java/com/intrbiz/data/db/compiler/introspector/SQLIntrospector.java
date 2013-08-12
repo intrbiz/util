@@ -26,7 +26,6 @@ import com.intrbiz.data.db.compiler.meta.SQLRemove;
 import com.intrbiz.data.db.compiler.meta.SQLSchema;
 import com.intrbiz.data.db.compiler.meta.SQLSetter;
 import com.intrbiz.data.db.compiler.meta.SQLTable;
-import com.intrbiz.data.db.compiler.meta.SQLTables;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.ForeignKey;
 import com.intrbiz.data.db.compiler.model.Function;
@@ -86,10 +85,10 @@ public class SQLIntrospector
 
     protected void buildTables(SQLDialect dialect, Class<? extends DatabaseAdapter> cls, Schema schema)
     {
-        SQLTables tables = cls.getAnnotation(SQLTables.class);
+        SQLSchema tables = cls.getAnnotation(SQLSchema.class);
         if (tables != null)
         {
-            for (Class<?> tCls : tables.value())
+            for (Class<?> tCls : tables.tables())
             {
                 Table table = this.buildTable(dialect, tCls, schema);
                 schema.addTable(table);
@@ -187,7 +186,7 @@ public class SQLIntrospector
         SQLColumn sa = field.getAnnotation(SQLColumn.class);
         if (sa != null)
         {
-            String name = Util.isEmpty(sa.name()) ? TextUtil.camelCaseToUnderscores(field.getName()) : sa.name();
+            String name = getColumnName(field);
             SQLType type = dialect.getType(field.getType());
             return new Column(sa.index(), name, type, field);
         }
@@ -275,14 +274,14 @@ public class SQLIntrospector
     public static String getColumnName(Field field)
     {
         SQLColumn sa = field.getAnnotation(SQLColumn.class);
-        if (sa != null) { return Util.isEmpty(sa.name()) ? TextUtil.camelCaseToUnderscores(field.getName()) : sa.name(); }
+        if (sa != null) { return sa.name(); }
         return null;
     }
 
     public static String getTableName(Class<?> cls)
     {
         SQLTable anno = cls.getAnnotation(SQLTable.class);
-        if (anno != null) { return Util.isEmpty(anno.name()) ? TextUtil.camelCaseToUnderscores(TextUtil.lcFirst(cls.getSimpleName())) : anno.name(); }
+        if (anno != null) { return anno.name(); }
         throw new RuntimeException("The class: " + cls.getCanonicalName() + " must be annotated with SQLTable()");
     }
 

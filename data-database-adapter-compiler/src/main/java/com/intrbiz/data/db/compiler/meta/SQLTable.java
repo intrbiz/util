@@ -9,6 +9,6 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface SQLTable
 {
-    String schema() default ""; // unimplemented
-    String name() default "";
+    String  name();
+    Version since();
 }

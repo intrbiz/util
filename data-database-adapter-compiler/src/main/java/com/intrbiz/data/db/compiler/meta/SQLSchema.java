@@ -10,4 +10,6 @@ import java.lang.annotation.Target;
 public @interface SQLSchema {
     String name();
     Version version();
+    Class<?>[] tables();
+    Class<?>[] patches() default {};
 }

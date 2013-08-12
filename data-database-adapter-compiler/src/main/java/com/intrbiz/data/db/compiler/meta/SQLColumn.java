@@ -10,6 +10,6 @@ import java.lang.annotation.Target;
 public @interface SQLColumn
 {
     int index();
-    String name() default "";
-    String type() default ""; // unimplemented
+    String name();
+    String type() default "";
 }
