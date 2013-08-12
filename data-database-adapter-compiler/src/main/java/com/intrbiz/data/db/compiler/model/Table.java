@@ -17,6 +17,8 @@ public class Table
 
     private Class<?> definition;
 
+    private Version since;
+
     public Table()
     {
         super();
@@ -96,7 +98,7 @@ public class Table
     {
         this.primaryKey = primaryKey;
     }
-    
+
     public List<Column> getNonPrimaryColumns()
     {
         List<Column> cols = new LinkedList<Column>();
@@ -130,6 +132,16 @@ public class Table
     public void setDefinition(Class<?> definition)
     {
         this.definition = definition;
+    }
+
+    public Version getSince()
+    {
+        return since;
+    }
+
+    public void setSince(Version since)
+    {
+        this.since = since;
     }
 
     public String toString()

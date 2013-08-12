@@ -10,5 +10,5 @@ import java.lang.annotation.Target;
 public @interface SQLTable
 {
     String  name();
-    Version since();
+    SQLVersion since();
 }

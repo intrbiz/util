@@ -304,7 +304,7 @@ public class PGSQLDialect implements SQLDialect
         to.write("CREATE OR REPLACE FUNCTION ").writeid(schema.getName()).writeln("._get_module_version()");
         to.writeln("RETURNS TEXT AS");
         to.writeln("$BODY$");
-        to.write("  SELECT '").write(schema.getVersion()).writeln("'::TEXT;");
+        to.write("  SELECT '").write(schema.getVersion().toString()).writeln("'::TEXT;");
         to.writeln("$BODY$");
         to.write("LANGUAGE sql IMMUTABLE");
         //

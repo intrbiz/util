@@ -33,6 +33,7 @@ import com.intrbiz.data.db.compiler.model.PrimaryKey;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
+import com.intrbiz.data.db.compiler.model.Version;
 import com.intrbiz.data.db.compiler.util.TextUtil;
 import com.intrbiz.metadata.ListOf;
 
@@ -150,6 +151,10 @@ public class SQLIntrospector
         {
             table = new Table(schema, getTableName(cls), cls);
             this.tableCache.put(cls, table);
+            //
+            SQLTable sqlTable = cls.getAnnotation(SQLTable.class);
+            // since
+            table.setSince(new Version(sqlTable.since()));
             // columns
             this.buildTable(dialect, cls, table, schema);
             // primary key
@@ -260,28 +265,28 @@ public class SQLIntrospector
     public static String getSchemaName(Class<?> cls)
     {
         SQLSchema schema = cls.getAnnotation(SQLSchema.class);
-        if (schema != null) { return schema.name(); }
+        if (schema != null) return schema.name();
         throw new RuntimeException("The class " + cls.getCanonicalName() + " must be annotated with SQLSchema()");
     }
     
-    public static String getSchemaVersion(Class<?> cls)
+    public static Version getSchemaVersion(Class<?> cls)
     {
         SQLSchema schema = cls.getAnnotation(SQLSchema.class);
-        if (schema != null) { return schema.version().major() + "." + schema.version().minor() + "." + schema.version().patch(); }
+        if (schema != null) return new Version(schema.version());
         throw new RuntimeException("The class " + cls.getCanonicalName() + " must be annotated with SQLSchema()");
     }
 
     public static String getColumnName(Field field)
     {
         SQLColumn sa = field.getAnnotation(SQLColumn.class);
-        if (sa != null) { return sa.name(); }
+        if (sa != null) return sa.name();
         return null;
     }
 
     public static String getTableName(Class<?> cls)
     {
         SQLTable anno = cls.getAnnotation(SQLTable.class);
-        if (anno != null) { return anno.name(); }
+        if (anno != null) return anno.name();
         throw new RuntimeException("The class: " + cls.getCanonicalName() + " must be annotated with SQLTable()");
     }
 

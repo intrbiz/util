@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface SQLSchema {
     String name();
-    Version version();
+    SQLVersion version();
     Class<?>[] tables();
     Class<?>[] patches() default {};
 }

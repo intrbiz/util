@@ -9,7 +9,7 @@ public class Schema
 {
     private String name;
 
-    private String version;
+    private Version version;
 
     private List<Table> tables = new LinkedList<Table>();
 
@@ -47,12 +47,12 @@ public class Schema
         this.name = name;
     }
 
-    public String getVersion()
+    public Version getVersion()
     {
         return version;
     }
 
-    public void setVersion(String version)
+    public void setVersion(Version version)
     {
         this.version = version;
     }

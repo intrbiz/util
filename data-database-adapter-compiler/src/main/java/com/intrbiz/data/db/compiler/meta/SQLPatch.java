@@ -28,6 +28,6 @@ import java.lang.annotation.Target;
 public @interface SQLPatch {
     String dialect() default "SQL"; // the dialect of the patch
     ScriptType type();              // install or upgrade
-    Version version();              // target version
+    SQLVersion version();              // target version
     boolean skip() default false;   // can this patch be skipped if the upgrade is jumping many versions
 }
