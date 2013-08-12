@@ -54,7 +54,18 @@ public class GetterGenerator implements SQLFunctionGenerator
                 if (arg.getShadowOf() != null)
                 {
                     if (ns) to.write(" AND ");
-                    to.writeid(arg.getShadowOf().getName()).write(" = ").writeid("p_" + arg.getName());
+                    if (arg.isOptional())
+                    {
+                        to.write("(");
+                        to.writeid(arg.getShadowOf().getName()).write(" = ").writeid("p_" + arg.getName());
+                        to.write(" OR ");
+                        to.writeid("p_" + arg.getName()).write(" IS NULL");
+                        to.write(")");
+                    }
+                    else
+                    {
+                        to.writeid(arg.getShadowOf().getName()).write(" = ").writeid("p_" + arg.getName());
+                    }
                     ns = true;
                 }
             }

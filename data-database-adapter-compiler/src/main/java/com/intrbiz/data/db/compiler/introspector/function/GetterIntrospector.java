@@ -61,7 +61,9 @@ public class GetterIntrospector implements SQLFunctionIntrospector
                 Column col = table.findColumn(param.value());
                 if (col == null) throw new RuntimeException("The parameter " + param.value() + " of method " + method + " has no corresponding column in table " + table.getName());
                 // add the argument
-                function.addArgument(new Argument(idx++, param.value(), sqlType, argType, col));
+                Argument arg = new Argument(idx++, param.value(), sqlType, argType, col);
+                arg.setOptional(param.optional());
+                function.addArgument(arg);
                 info.setParameterised(true);
             }
             else if (offset != null)

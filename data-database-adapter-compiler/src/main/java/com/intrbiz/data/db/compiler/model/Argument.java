@@ -14,6 +14,8 @@ public class Argument
 
     private Column shadowOf;
 
+    private boolean optional = false;
+
     public Argument()
     {
         super();
@@ -38,7 +40,7 @@ public class Argument
         this.index = index;
         this.javaClass = javaClass;
     }
-    
+
     public Argument(int index, String name, SQLType type, Class<?> javaClass, Column shadowOf)
     {
         this(name, type);
@@ -95,5 +97,15 @@ public class Argument
     public void setShadowOf(Column shadowOf)
     {
         this.shadowOf = shadowOf;
+    }
+
+    public boolean isOptional()
+    {
+        return optional;
+    }
+
+    public void setOptional(boolean optional)
+    {
+        this.optional = optional;
     }
 }
