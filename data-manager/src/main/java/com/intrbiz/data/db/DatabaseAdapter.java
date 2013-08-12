@@ -60,9 +60,17 @@ public abstract class DatabaseAdapter implements DataAdapter
     @Override
     public final String getName()
     {
-        // TODO
-        return "";
+        return this._getDatabaseModuleName();
     }
+    
+    public final String getVersion()
+    {
+        return this._getDatabaseModuleVersion();
+    }
+    
+    protected abstract String _getDatabaseModuleName();
+    
+    protected abstract String _getDatabaseModuleVersion();
 
     @Override
     public final void close()
