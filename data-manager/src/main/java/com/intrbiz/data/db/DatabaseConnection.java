@@ -1,6 +1,8 @@
 package com.intrbiz.data.db;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import com.intrbiz.data.DataException;
@@ -241,6 +243,64 @@ public class DatabaseConnection implements AutoCloseable
         {
             this.end();
         }
+    }
+
+    public void execute(final DatabaseCall<Void> transaction) throws DataException
+    {
+        this.begin();
+        try
+        {
+            try
+            {
+                transaction.run(this.borrowConnection());
+                this.commit();
+            }
+            catch (SQLException e)
+            {
+                throw new DataException(e);
+            }
+
+        }
+        finally
+        {
+            this.end();
+        }
+    }
+
+    /**
+     * Internal helper, nothing to see here
+     */
+    public String getDatabaseModuleName(final String sql)
+    {
+        try
+        {
+            return this.use(new DatabaseCall<String>()
+            {
+                public String run(final Connection with) throws SQLException
+                {
+                    try (PreparedStatement stmt = with.prepareStatement(sql))
+                    {
+                        try (ResultSet rs = stmt.executeQuery())
+                        {
+                            if (rs.next()) return rs.getString(1);
+                        }
+                    }
+                    return null;
+                }
+            });
+        }
+        catch (DataException e)
+        {
+        }
+        return null;
+    }
+    
+    /**
+     * Internal helper, nothing to see here
+     */
+    public String getDatabaseModuleVersion(final String sql)
+    {
+        return this.getDatabaseModuleName(sql);
     }
 
     /**

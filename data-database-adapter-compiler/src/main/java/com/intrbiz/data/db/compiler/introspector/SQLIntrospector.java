@@ -42,6 +42,8 @@ public class SQLIntrospector
     private Map<Class<? extends Annotation>, SQLFunctionIntrospector> functionIntrospectors = new IdentityHashMap<Class<? extends Annotation>, SQLFunctionIntrospector>();
 
     // caches
+    
+    private Map<Class<? extends DatabaseAdapter>, Schema> schemaCache = new IdentityHashMap<Class<? extends DatabaseAdapter>, Schema>();
 
     private Map<Class<?>, Table> tableCache = new IdentityHashMap<Class<?>, Table>();
 
@@ -70,10 +72,15 @@ public class SQLIntrospector
 
     public Schema buildSchema(SQLDialect dialect, Class<? extends DatabaseAdapter> cls)
     {
-        Schema schema = new Schema(getSchemaName(cls), cls);
-        schema.setVersion(getSchemaVersion(cls));
-        this.buildTables(dialect, cls, schema);
-        this.buildFunctions(dialect, cls, schema);
+        Schema schema = this.schemaCache.get(cls);
+        if (schema == null)
+        {
+            schema = new Schema(getSchemaName(cls), cls);
+            this.schemaCache.put(cls, schema);
+            schema.setVersion(getSchemaVersion(cls));
+            this.buildTables(dialect, cls, schema);
+            this.buildFunctions(dialect, cls, schema);
+        }
         return schema;
     }
 
