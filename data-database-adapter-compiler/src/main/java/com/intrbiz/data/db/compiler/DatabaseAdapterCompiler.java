@@ -133,8 +133,18 @@ public class DatabaseAdapterCompiler
     
     public boolean isSchemaInstalled(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
     {
-        String nameQuery = this.dialect.getSchemaNameQuery(this.introspector.buildSchema(this.dialect, cls));
-        return database.getDatabaseModuleName(nameQuery) != null;
+        Schema schema = this.introspector.buildSchema(this.dialect, cls);
+        String installedName = database.getDatabaseModuleName(this.dialect.getSchemaNameQuery(schema));
+        return installedName != null;
+    }
+    
+    public boolean isSchemaUptoDate(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
+    {
+        Schema schema = this.introspector.buildSchema(this.dialect, cls);
+        // get the installed version
+        String installedVersion = database.getDatabaseModuleVersion(this.dialect.getSchemaVersionQuery(schema));
+        //
+        return schema.getVersion().equals(installedVersion);
     }
 
     public void installSchema(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
