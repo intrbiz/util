@@ -9,6 +9,8 @@ public class Schema
 {
     private String name;
 
+    private String version;
+
     private List<Table> tables = new LinkedList<Table>();
 
     private List<Type> types = new LinkedList<Type>();
@@ -27,7 +29,7 @@ public class Schema
         super();
         this.name = name;
     }
-    
+
     public Schema(String name, Class<? extends DatabaseAdapter> definition)
     {
         super();
@@ -43,6 +45,16 @@ public class Schema
     public void setName(String name)
     {
         this.name = name;
+    }
+
+    public String getVersion()
+    {
+        return version;
+    }
+
+    public void setVersion(String version)
+    {
+        this.version = version;
     }
 
     public List<Table> getTables()

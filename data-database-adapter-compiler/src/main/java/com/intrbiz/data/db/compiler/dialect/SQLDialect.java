@@ -39,5 +39,17 @@ public interface SQLDialect
     
     void writeCreateFunction(SQLWriter to, Function function) throws IOException;
     
+    //
+    
+    void writeCreateSchemaNameFunction(SQLWriter to, Schema schema) throws IOException;
+    
+    void writeCreateSchemaVersionFunction(SQLWriter to, Schema schema) throws IOException;
+    
+    String getSchemaNameSQL(Schema schema);
+    
+    String getSchemaVersionSQL(Schema schema);
+    
+    //
+    
     String functionBindingSQL(Function function);
 }

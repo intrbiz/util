@@ -71,6 +71,7 @@ public class SQLIntrospector
     public Schema buildSchema(SQLDialect dialect, Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = new Schema(getSchemaName(cls), cls);
+        schema.setVersion(getSchemaVersion(cls));
         this.buildTables(dialect, cls, schema);
         this.buildFunctions(dialect, cls, schema);
         return schema;
@@ -254,6 +255,13 @@ public class SQLIntrospector
     {
         SQLSchema schema = cls.getAnnotation(SQLSchema.class);
         if (schema != null) { return schema.name(); }
+        throw new RuntimeException("The class " + cls.getCanonicalName() + " must be annotated with SQLSchema()");
+    }
+    
+    public static String getSchemaVersion(Class<?> cls)
+    {
+        SQLSchema schema = cls.getAnnotation(SQLSchema.class);
+        if (schema != null) { return schema.version().major() + "." + schema.version().minor() + "." + schema.version().patch(); }
         throw new RuntimeException("The class " + cls.getCanonicalName() + " must be annotated with SQLSchema()");
     }
 

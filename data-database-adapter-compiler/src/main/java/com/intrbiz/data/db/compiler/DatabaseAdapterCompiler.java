@@ -110,6 +110,9 @@ public class DatabaseAdapterCompiler
         to.writeln();
         //
         this.dialect.writeCreateSchema(to, schema);
+        // info functions
+        this.dialect.writeCreateSchemaNameFunction(to, schema);
+        this.dialect.writeCreateSchemaVersionFunction(to, schema);
         //
         for (Table table : schema.getTables())
         {
@@ -173,10 +176,14 @@ public class DatabaseAdapterCompiler
         impl.addImport(ResultSet.class.getCanonicalName());
         impl.addImport(SQLException.class.getCanonicalName());
         impl.addImport(UUID.class.getCanonicalName());
+        impl.addImport(Exception.class.getCanonicalName());
         // super class
         impl.setSuperClass(cls.getSimpleName());
         // default constructor
         impl.newConstructor(new JavaParameter("DatabaseConnection", "connection")).append("super(connection);");
+        // info functions
+        this.compileSchemaName(impl, schema);
+        this.compileSchemaVersion(impl, schema);
         // the database functions
         for (Function function : schema.getFunctions())
         {
@@ -204,6 +211,56 @@ public class DatabaseAdapterCompiler
         {
             throw new RuntimeException("Failed to compile adapter implementation", e);
         }
+    }
+    
+    protected void compileSchemaName(JavaClass impl, Schema schema)
+    {
+        JavaMethod jm = impl.newMethod("String", "_getDatabaseModuleName");
+        jm.append("try\r\n");
+        jm.append("{\r\n");
+        jm.append("  return this.connection.use(new DatabaseCall<String>() {\r\n");
+        jm.append("    public String run(final Connection with) throws SQLException {\r\n");
+        jm.append("      try (PreparedStatement stmt = with.prepareStatement(\"" + escapeString(this.dialect.getSchemaNameSQL(schema)) + "\"))\r\n");
+        jm.append("      {\r\n");
+        jm.append("        try (ResultSet rs = stmt.executeQuery())\r\n");
+        jm.append("        {\r\n");
+        jm.append("          if (rs.next()) return rs.getString(1);\r\n");
+        jm.append("        }\r\n");
+        jm.append("      }\r\n");
+        jm.append("      return null;\r\n");
+        jm.append("    }\r\n");
+        jm.append("  });\r\n");
+        jm.append("}\r\n");
+        jm.append("catch (Exception e)\r\n");
+        jm.append("{\r\n");
+        jm.append("/* Eat */\r\n");
+        jm.append("}\r\n");
+        jm.append("return null;\r\n");
+    }
+    
+    protected void compileSchemaVersion(JavaClass impl, Schema schema)
+    {
+        JavaMethod jm = impl.newMethod("String", "_getDatabaseModuleVersion");
+        jm.append("try\r\n");
+        jm.append("{\r\n");
+        jm.append("  return this.connection.use(new DatabaseCall<String>() {\r\n");
+        jm.append("    public String run(final Connection with) throws SQLException {\r\n");
+        jm.append("      try (PreparedStatement stmt = with.prepareStatement(\"" + escapeString(this.dialect.getSchemaVersionSQL(schema)) + "\"))\r\n");
+        jm.append("      {\r\n");
+        jm.append("        try (ResultSet rs = stmt.executeQuery())\r\n");
+        jm.append("        {\r\n");
+        jm.append("          if (rs.next()) return rs.getString(1);\r\n");
+        jm.append("        }\r\n");
+        jm.append("      }\r\n");
+        jm.append("      return null;\r\n");
+        jm.append("    }\r\n");
+        jm.append("  });\r\n");
+        jm.append("}\r\n");
+        jm.append("catch (Exception e)\r\n");
+        jm.append("{\r\n");
+        jm.append("/* Eat */\r\n");
+        jm.append("}\r\n");
+        jm.append("return null;\r\n");
     }
 
     protected void compileMethodBinding(JavaMethod method, Function function)

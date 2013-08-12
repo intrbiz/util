@@ -275,6 +275,46 @@ public class PGSQLDialect implements SQLDialect
         to.writeln();
         to.flush();
     }
+    
+    @Override
+    public void writeCreateSchemaNameFunction(SQLWriter to, Schema schema) throws IOException
+    {
+        to.write("CREATE OR REPLACE FUNCTION ").writeid(schema.getName()).writeln("._get_module_name()");
+        to.writeln("RETURNS TEXT AS");
+        to.writeln("$BODY$");
+        to.write("  SELECT '").write(schema.getName()).writeln("'::TEXT;");
+        to.writeln("$BODY$");
+        to.writeln("LANGUAGE sql IMMUTABLE;");
+        //
+        to.write("ALTER FUNCTION ").writeid(schema.getName()).write("._get_module_name() OWNER TO ").write(this.getOwner()).writeln(";");
+        to.writeln();
+    }
+    
+    @Override
+    public void writeCreateSchemaVersionFunction(SQLWriter to, Schema schema) throws IOException
+    {
+        to.write("CREATE OR REPLACE FUNCTION ").writeid(schema.getName()).writeln("._get_module_version()");
+        to.writeln("RETURNS TEXT AS");
+        to.writeln("$BODY$");
+        to.write("  SELECT '").write(schema.getVersion()).writeln("'::TEXT;");
+        to.writeln("$BODY$");
+        to.writeln("LANGUAGE sql IMMUTABLE;");
+        //
+        to.write("ALTER FUNCTION ").writeid(schema.getName()).write("._get_module_version() OWNER TO ").write(this.getOwner()).writeln(";");
+        to.writeln();
+    }
+    
+    @Override
+    public String getSchemaNameSQL(Schema schema)
+    {
+        return "SELECT \"" + schema.getName() + "\"._get_module_name()";
+    }
+    
+    @Override
+    public String getSchemaVersionSQL(Schema schema)
+    {
+        return "SELECT \"" + schema.getName() + "\"._get_module_version()";
+    }
 
     public String functionBindingSQL(Function function)
     {
