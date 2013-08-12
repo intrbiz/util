@@ -15,6 +15,7 @@ import java.util.UUID;
 
 import com.intrbiz.data.DataException;
 import com.intrbiz.data.DataManager.DatabaseAdapterFactory;
+import com.intrbiz.data.Transaction;
 import com.intrbiz.data.db.DatabaseAdapter;
 import com.intrbiz.data.db.DatabaseConnection;
 import com.intrbiz.data.db.DatabaseConnection.DatabaseCall;
@@ -34,6 +35,8 @@ import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
+import com.intrbiz.data.db.compiler.util.SQLCommand;
+import com.intrbiz.data.db.compiler.util.SQLScript;
 import com.intrbiz.data.db.compiler.util.SQLScriptSet;
 import com.intrbiz.util.compiler.CompilerTool;
 import com.intrbiz.util.compiler.model.JavaClass;
@@ -98,8 +101,10 @@ public class DatabaseAdapterCompiler
     {
         return this.functionCompilers.get(type);
     }
+    
+    // schema
 
-    public SQLScriptSet compileSchema(Class<? extends DatabaseAdapter> cls) throws IOException
+    public SQLScriptSet compileSchema(Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
         //
@@ -126,6 +131,8 @@ public class DatabaseAdapterCompiler
         }
         return set;
     }
+    
+    // adapter class
 
     @SuppressWarnings("unchecked")
     public <T extends DatabaseAdapter> DatabaseAdapterFactory<T> compileAdapterFactory(Class<T> cls)
@@ -152,7 +159,7 @@ public class DatabaseAdapterCompiler
         }
     }
 
-    protected Class<?> compileAdapterImplementation(Class<? extends DatabaseAdapter> cls)
+    public Class<?> compileAdapterImplementation(Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
         // the implementation class

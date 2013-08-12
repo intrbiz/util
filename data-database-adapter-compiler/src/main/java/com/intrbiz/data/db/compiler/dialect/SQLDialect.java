@@ -32,19 +32,19 @@ public interface SQLDialect
     
     //
     
-    SQLScript writeCreateSchema(Schema schema) throws IOException;
+    SQLScript writeCreateSchema(Schema schema);
     
-    SQLScript writeCreateTable(Table table) throws IOException;
+    SQLScript writeCreateTable(Table table);
     
-    SQLScript writeCreateType(Type type) throws IOException;
+    SQLScript writeCreateType(Type type);
     
-    SQLScript writeCreateFunction(Function function) throws IOException;
+    SQLScript writeCreateFunction(Function function);
     
     //
     
-    SQLScript writeCreateSchemaNameFunction(Schema schema) throws IOException;
+    SQLScript writeCreateSchemaNameFunction(Schema schema);
     
-    SQLScript writeCreateSchemaVersionFunction(Schema schema) throws IOException;
+    SQLScript writeCreateSchemaVersionFunction(Schema schema);
     
     String getSchemaNameQuery(Schema schema);
     
