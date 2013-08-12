@@ -1,7 +1,5 @@
 package com.intrbiz.data.db.compiler.dialect.pgsql.function;
 
-import java.io.IOException;
-
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
 import com.intrbiz.data.db.compiler.model.Argument;
@@ -9,12 +7,12 @@ import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.function.SetterInfo;
-import com.intrbiz.data.db.compiler.util.SQLWriter;
+import com.intrbiz.data.db.compiler.util.SQLCommand;
 
 public class SetterGenerator implements SQLFunctionGenerator
 {
     @Override
-    public void writeCreateFunctionBody(SQLDialect dialect, SQLWriter to, Function function) throws IOException
+    public void writeCreateFunctionBody(SQLDialect dialect, SQLCommand to, Function function)
     {
         SetterInfo info = (SetterInfo) function.getIntrospectionInformation();
         //
@@ -53,7 +51,7 @@ public class SetterGenerator implements SQLFunctionGenerator
         to.writeln("END;");
     }
     
-    protected void generateInsert(SQLDialect dialect, SQLWriter to, Function function) throws IOException
+    protected void generateInsert(SQLDialect dialect, SQLCommand to, Function function)
     {
         SetterInfo info = (SetterInfo) function.getIntrospectionInformation();
         Table table = info.getTable();
@@ -62,7 +60,7 @@ public class SetterGenerator implements SQLFunctionGenerator
         to.write("(").writeArgumentNameList(function.getArguments()).writeln(");");
     }
     
-    protected void generateUpdate(SQLDialect dialect, SQLWriter to, Function function) throws IOException
+    protected void generateUpdate(SQLDialect dialect, SQLCommand to, Function function)
     {
         SetterInfo info = (SetterInfo) function.getIntrospectionInformation();
         Table table = info.getTable();
@@ -90,8 +88,9 @@ public class SetterGenerator implements SQLFunctionGenerator
         to.writeln(";");
     }
     
-    public void writefunctionBindingSQL(SQLDialect dialect, SQLWriter to, Function function) throws IOException
+    public SQLCommand writefunctionBindingSQL(SQLDialect dialect, Function function)
     {
+        SQLCommand to = new SQLCommand();
         to.write("SELECT * FROM ").writeid(function.getSchema(), function.getName()).write("(");
         boolean ns = false;
         for (Argument arg : function.getArguments())
@@ -101,5 +100,6 @@ public class SetterGenerator implements SQLFunctionGenerator
             ns = true;
         }
         to.write(")");
+        return to;
     }
 }

@@ -9,7 +9,8 @@ import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
-import com.intrbiz.data.db.compiler.util.SQLWriter;
+import com.intrbiz.data.db.compiler.util.SQLCommand;
+import com.intrbiz.data.db.compiler.util.SQLScript;
 
 public interface SQLDialect
 {
@@ -31,25 +32,25 @@ public interface SQLDialect
     
     //
     
-    void writeCreateSchema(SQLWriter to, Schema schema) throws IOException;
+    SQLScript writeCreateSchema(Schema schema) throws IOException;
     
-    void writeCreateTable(SQLWriter to, Table table) throws IOException;
+    SQLScript writeCreateTable(Table table) throws IOException;
     
-    void writeCreateType(SQLWriter to, Type type) throws IOException;
+    SQLScript writeCreateType(Type type) throws IOException;
     
-    void writeCreateFunction(SQLWriter to, Function function) throws IOException;
-    
-    //
-    
-    void writeCreateSchemaNameFunction(SQLWriter to, Schema schema) throws IOException;
-    
-    void writeCreateSchemaVersionFunction(SQLWriter to, Schema schema) throws IOException;
-    
-    String getSchemaNameSQL(Schema schema);
-    
-    String getSchemaVersionSQL(Schema schema);
+    SQLScript writeCreateFunction(Function function) throws IOException;
     
     //
     
-    String functionBindingSQL(Function function);
+    SQLScript writeCreateSchemaNameFunction(Schema schema) throws IOException;
+    
+    SQLScript writeCreateSchemaVersionFunction(Schema schema) throws IOException;
+    
+    String getSchemaNameQuery(Schema schema);
+    
+    String getSchemaVersionQuery(Schema schema);
+    
+    //
+    
+    SQLCommand getFunctionCallQuery(Function function);
 }

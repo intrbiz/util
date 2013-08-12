@@ -1,7 +1,5 @@
 package com.intrbiz.data.db.compiler.dialect.pgsql.function;
 
-import java.io.IOException;
-
 import com.intrbiz.Util;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
@@ -10,12 +8,12 @@ import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Order;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.function.GetterInfo;
-import com.intrbiz.data.db.compiler.util.SQLWriter;
+import com.intrbiz.data.db.compiler.util.SQLCommand;
 
 public class GetterGenerator implements SQLFunctionGenerator
 {
     @Override
-    public void writeCreateFunctionBody(SQLDialect dialect, SQLWriter to, Function function) throws IOException
+    public void writeCreateFunctionBody(SQLDialect dialect, SQLCommand to, Function function)
     {
         GetterInfo info = (GetterInfo) function.getIntrospectionInformation();
         //
@@ -38,7 +36,7 @@ public class GetterGenerator implements SQLFunctionGenerator
         to.writeln("END;");
     }
     
-    protected void generateQuery(SQLDialect dialect, SQLWriter to, Function function) throws IOException
+    protected void generateQuery(SQLDialect dialect, SQLCommand to, Function function)
     {
         GetterInfo info = (GetterInfo) function.getIntrospectionInformation();
         Table table = info.getTable();
@@ -94,8 +92,9 @@ public class GetterGenerator implements SQLFunctionGenerator
         to.writeln(";");        
     }
     
-    public void writefunctionBindingSQL(SQLDialect dialect, SQLWriter to, Function function) throws IOException
+    public SQLCommand writefunctionBindingSQL(SQLDialect dialect, Function function)
     {
+        SQLCommand to = new SQLCommand();
         to.write("SELECT * FROM ").writeid(function.getSchema(), function.getName()).write("(");
         boolean ns = false;
         for (Argument arg : function.getArguments())
@@ -118,5 +117,6 @@ public class GetterGenerator implements SQLFunctionGenerator
                 ns = true;
             }
         }
+        return to;
     }
 }

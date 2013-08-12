@@ -28,7 +28,7 @@ public class GetterCompiler implements FunctionCompiler
         //
         if (function.isReturnsList()) s.append("    List<").append(objType).append("> ret = new LinkedList<").append(objType).append(">();\r\n");
         //
-        s.append("    try (PreparedStatement stmt = with.prepareStatement(\"").append(escapeString(compiler.getDialect().functionBindingSQL(function))).append("\"))\r\n");
+        s.append("    try (PreparedStatement stmt = with.prepareStatement(\"").append(escapeString(compiler.getDialect().getFunctionCallQuery(function).toString())).append("\"))\r\n");
         s.append("    {\r\n");
         // bind params
         int idx = 0;

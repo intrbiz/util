@@ -1,7 +1,5 @@
 package com.intrbiz.data.db.compiler.dialect.pgsql;
 
-import java.io.IOException;
-import java.io.StringWriter;
 import java.lang.annotation.Annotation;
 import java.sql.Date;
 import java.sql.Timestamp;
@@ -28,7 +26,8 @@ import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
-import com.intrbiz.data.db.compiler.util.SQLWriter;
+import com.intrbiz.data.db.compiler.util.SQLCommand;
+import com.intrbiz.data.db.compiler.util.SQLScript;
 
 public class PGSQLDialect implements SQLDialect
 {
@@ -140,16 +139,18 @@ public class PGSQLDialect implements SQLDialect
     //
 
     @Override
-    public void writeCreateSchema(SQLWriter to, Schema schema) throws IOException
+    public SQLScript writeCreateSchema(Schema schema)
     {
-        to.write("CREATE SCHEMA ").writeid(schema.getName()).write(" AUTHORIZATION ").write(this.getOwner()).writeln(";");
-        to.writeln();
-        to.flush();
+        SQLScript s = new SQLScript();
+        s.command().write("CREATE SCHEMA ").writeid(schema.getName()).write(" AUTHORIZATION ").write(this.getOwner());
+        return s;
     }
 
     @Override
-    public void writeCreateTable(SQLWriter to, Table table) throws IOException
+    public SQLScript writeCreateTable(Table table)
     {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
         to.write("CREATE TABLE ").writeid(table.getSchema(), table.getName()).writeln();
         to.writeln("(");
         // attributes
@@ -182,12 +183,11 @@ public class PGSQLDialect implements SQLDialect
             ns = true;
         }
         to.writeln();
-        to.writeln(");");
+        to.writeln(")");
         //
-        to.write("ALTER TABLE ").writeid(table.getSchema(), table.getName()).write(" OWNER TO ").write(this.getOwner()).writeln(";");
+        s.command().write("ALTER TABLE ").writeid(table.getSchema(), table.getName()).write(" OWNER TO ").write(this.getOwner());
         //
-        to.writeln();
-        to.flush();
+        return s;
     }
 
     protected String writeForeignKeyAction(Action a)
@@ -213,8 +213,10 @@ public class PGSQLDialect implements SQLDialect
     }
 
     @Override
-    public void writeCreateType(SQLWriter to, Type type) throws IOException
+    public SQLScript writeCreateType(Type type)
     {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
         to.write("CREATE TYPE ").writeid(type.getSchema(), type.getName()).writeln(" AS");
         to.writeln("(");
         // attributes
@@ -226,17 +228,18 @@ public class PGSQLDialect implements SQLDialect
             ns = true;
         }
         to.writeln();
-        to.writeln(");");
+        to.writeln(")");
         //
-        to.write("ALTER TYPE ").writeid(type.getSchema(), type.getName()).write(" OWNER TO ").write(this.getOwner()).writeln(";");
+        s.command().write("ALTER TYPE ").writeid(type.getSchema(), type.getName()).write(" OWNER TO ").write(this.getOwner());
         //
-        to.writeln();
-        to.flush();
+        return s;
     }
 
     @Override
-    public void writeCreateFunction(SQLWriter to, Function function) throws IOException
+    public SQLScript writeCreateFunction(Function function)
     {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
         to.write("CREATE OR REPLACE FUNCTION ").writeid(function.getSchema(), function.getName()).write("(");
         boolean ns = false;
         for (Argument arg : function.getArguments())
@@ -262,7 +265,9 @@ public class PGSQLDialect implements SQLDialect
         if (generator != null) generator.writeCreateFunctionBody(this, to, function);
         //
         to.writeln("$BODY$");
-        to.writeln("LANGUAGE plpgsql;");
+        to.write("LANGUAGE plpgsql");
+        
+        to = s.command();
         to.write("ALTER FUNCTION ").writeid(function.getSchema(), function.getName()).write("(");
         ns = false;
         for (Argument arg : function.getArguments())
@@ -271,67 +276,58 @@ public class PGSQLDialect implements SQLDialect
             to.write(arg.getType().getSQLType());
             ns = true;
         }
-        to.write(") OWNER TO ").write(this.getOwner()).writeln(";");
-        to.writeln();
-        to.flush();
+        to.write(") OWNER TO ").write(this.getOwner());
+        return s;
     }
     
     @Override
-    public void writeCreateSchemaNameFunction(SQLWriter to, Schema schema) throws IOException
+    public SQLScript writeCreateSchemaNameFunction(Schema schema)
     {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
         to.write("CREATE OR REPLACE FUNCTION ").writeid(schema.getName()).writeln("._get_module_name()");
         to.writeln("RETURNS TEXT AS");
         to.writeln("$BODY$");
         to.write("  SELECT '").write(schema.getName()).writeln("'::TEXT;");
         to.writeln("$BODY$");
-        to.writeln("LANGUAGE sql IMMUTABLE;");
+        to.write("LANGUAGE sql IMMUTABLE");
         //
-        to.write("ALTER FUNCTION ").writeid(schema.getName()).write("._get_module_name() OWNER TO ").write(this.getOwner()).writeln(";");
-        to.writeln();
+        s.command().write("ALTER FUNCTION ").writeid(schema.getName()).write("._get_module_name() OWNER TO ").write(this.getOwner());
+        return s;
     }
     
     @Override
-    public void writeCreateSchemaVersionFunction(SQLWriter to, Schema schema) throws IOException
+    public SQLScript writeCreateSchemaVersionFunction(Schema schema)
     {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
         to.write("CREATE OR REPLACE FUNCTION ").writeid(schema.getName()).writeln("._get_module_version()");
         to.writeln("RETURNS TEXT AS");
         to.writeln("$BODY$");
         to.write("  SELECT '").write(schema.getVersion()).writeln("'::TEXT;");
         to.writeln("$BODY$");
-        to.writeln("LANGUAGE sql IMMUTABLE;");
+        to.write("LANGUAGE sql IMMUTABLE");
         //
-        to.write("ALTER FUNCTION ").writeid(schema.getName()).write("._get_module_version() OWNER TO ").write(this.getOwner()).writeln(";");
-        to.writeln();
+        s.command().write("ALTER FUNCTION ").writeid(schema.getName()).write("._get_module_version() OWNER TO ").write(this.getOwner());
+        return s;
     }
     
     @Override
-    public String getSchemaNameSQL(Schema schema)
+    public String getSchemaNameQuery(Schema schema)
     {
         return "SELECT \"" + schema.getName() + "\"._get_module_name()";
     }
     
     @Override
-    public String getSchemaVersionSQL(Schema schema)
+    public String getSchemaVersionQuery(Schema schema)
     {
         return "SELECT \"" + schema.getName() + "\"._get_module_version()";
     }
 
-    public String functionBindingSQL(Function function)
+    public SQLCommand getFunctionCallQuery(Function function)
     {
-        StringWriter sw = new StringWriter();
-        SQLWriter to = new SQLWriter(sw);
-        //
         SQLFunctionGenerator generator = this.getFunctionGenerator(function.getFunctionType().annotationType());
-        try
-        {
-            if (generator != null) generator.writefunctionBindingSQL(this, to, function);
-        }
-        catch (IOException e)
-        {
-        }
-        //
-        to.flush();
-        to.close();
-        return sw.toString();
+        if (generator != null) return generator.writefunctionBindingSQL(this, function);
+        throw new RuntimeException("Cannot generate calling SQL query for method: " + function.getDefinition());
     }
 }

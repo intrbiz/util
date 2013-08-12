@@ -19,7 +19,7 @@ public class SetterCompiler implements FunctionCompiler
         s.append("this.connection.use(new DatabaseCall<Object>() {\r\n");
         s.append("  public Object run(final Connection with) throws SQLException, DataException {\r\n");
         //
-        s.append("    try (PreparedStatement stmt = with.prepareStatement(\"").append(escapeString(compiler.getDialect().functionBindingSQL(function))).append("\"))\r\n");
+        s.append("    try (PreparedStatement stmt = with.prepareStatement(\"").append(escapeString(compiler.getDialect().getFunctionCallQuery(function).toString())).append("\"))\r\n");
         s.append("    {\r\n");
         // bind params
         int idx = 0;

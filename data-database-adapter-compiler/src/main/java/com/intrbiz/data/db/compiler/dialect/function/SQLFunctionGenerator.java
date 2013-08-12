@@ -1,14 +1,12 @@
 package com.intrbiz.data.db.compiler.dialect.function;
 
-import java.io.IOException;
-
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.model.Function;
-import com.intrbiz.data.db.compiler.util.SQLWriter;
+import com.intrbiz.data.db.compiler.util.SQLCommand;
 
 public interface SQLFunctionGenerator
 {
-    void writeCreateFunctionBody(SQLDialect dialect, SQLWriter to, Function function) throws IOException;
+    void writeCreateFunctionBody(SQLDialect dialect, SQLCommand to, Function function);
     
-    void writefunctionBindingSQL(SQLDialect dialect, SQLWriter to, Function function) throws IOException;
+    SQLCommand writefunctionBindingSQL(SQLDialect dialect, Function function);
 }

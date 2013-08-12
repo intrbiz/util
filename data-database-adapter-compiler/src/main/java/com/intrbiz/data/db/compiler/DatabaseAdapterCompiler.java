@@ -1,7 +1,6 @@
 package com.intrbiz.data.db.compiler;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Modifier;
 import java.sql.Connection;
@@ -35,7 +34,7 @@ import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
-import com.intrbiz.data.db.compiler.util.SQLWriter;
+import com.intrbiz.data.db.compiler.util.SQLScriptSet;
 import com.intrbiz.util.compiler.CompilerTool;
 import com.intrbiz.util.compiler.model.JavaClass;
 import com.intrbiz.util.compiler.model.JavaMethod;
@@ -100,38 +99,32 @@ public class DatabaseAdapterCompiler
         return this.functionCompilers.get(type);
     }
 
-    public void compileSchema(Class<? extends DatabaseAdapter> cls) throws IOException
+    public SQLScriptSet compileSchema(Class<? extends DatabaseAdapter> cls) throws IOException
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
         //
-        SQLWriter to = new SQLWriter(new PrintWriter(System.out));
+        SQLScriptSet set = new SQLScriptSet();
         //
-        to.writeln("BEGIN;");
-        to.writeln();
-        //
-        this.dialect.writeCreateSchema(to, schema);
+        set.add(this.dialect.writeCreateSchema(schema));
         // info functions
-        this.dialect.writeCreateSchemaNameFunction(to, schema);
-        this.dialect.writeCreateSchemaVersionFunction(to, schema);
+        set.add(this.dialect.writeCreateSchemaNameFunction(schema));
+        set.add(this.dialect.writeCreateSchemaVersionFunction(schema));
         //
         for (Table table : schema.getTables())
         {
-            this.dialect.writeCreateTable(to, table);
+            set.add(this.dialect.writeCreateTable(table));
         }
         //
         for (Type type : schema.getTypes())
         {
-            this.dialect.writeCreateType(to, type);
+            set.add(this.dialect.writeCreateType(type));
         }
         //
         for (Function function : schema.getFunctions())
         {
-            this.dialect.writeCreateFunction(to, function);
+            set.add(this.dialect.writeCreateFunction(function));
         }
-        //
-        to.writeln();
-        to.writeln("COMMIT;");
-        to.flush();
+        return set;
     }
 
     @SuppressWarnings("unchecked")
@@ -220,7 +213,7 @@ public class DatabaseAdapterCompiler
         jm.append("{\r\n");
         jm.append("  return this.connection.use(new DatabaseCall<String>() {\r\n");
         jm.append("    public String run(final Connection with) throws SQLException {\r\n");
-        jm.append("      try (PreparedStatement stmt = with.prepareStatement(\"" + escapeString(this.dialect.getSchemaNameSQL(schema)) + "\"))\r\n");
+        jm.append("      try (PreparedStatement stmt = with.prepareStatement(\"" + escapeString(this.dialect.getSchemaNameQuery(schema)) + "\"))\r\n");
         jm.append("      {\r\n");
         jm.append("        try (ResultSet rs = stmt.executeQuery())\r\n");
         jm.append("        {\r\n");
@@ -245,7 +238,7 @@ public class DatabaseAdapterCompiler
         jm.append("{\r\n");
         jm.append("  return this.connection.use(new DatabaseCall<String>() {\r\n");
         jm.append("    public String run(final Connection with) throws SQLException {\r\n");
-        jm.append("      try (PreparedStatement stmt = with.prepareStatement(\"" + escapeString(this.dialect.getSchemaVersionSQL(schema)) + "\"))\r\n");
+        jm.append("      try (PreparedStatement stmt = with.prepareStatement(\"" + escapeString(this.dialect.getSchemaVersionQuery(schema)) + "\"))\r\n");
         jm.append("      {\r\n");
         jm.append("        try (ResultSet rs = stmt.executeQuery())\r\n");
         jm.append("        {\r\n");
