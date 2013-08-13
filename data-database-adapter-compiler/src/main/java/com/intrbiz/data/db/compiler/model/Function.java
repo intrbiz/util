@@ -156,5 +156,20 @@ public class Function
     public void setSince(Version since)
     {
         this.since = since;
-    }    
+    }
+    
+    public String getSignature()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append(this.getSchema().getName()).append(".").append(this.getName()).append("(");
+        boolean ns = false;
+        for (Argument arg : this.getArguments())
+        {
+            if (ns) sb.append(",");
+            sb.append(arg.getType().getSQLType());
+            ns = true;
+        }
+        sb.append(")");
+        return sb.toString();
+    }
 }

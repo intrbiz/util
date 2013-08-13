@@ -11,6 +11,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
@@ -43,9 +44,12 @@ import com.intrbiz.data.db.compiler.util.SQLScript;
 import com.intrbiz.data.db.compiler.util.SQLScriptSet;
 import com.intrbiz.util.compiler.CompilerTool;
 import com.intrbiz.util.compiler.model.JavaClass;
+import com.intrbiz.util.compiler.model.JavaField;
 import com.intrbiz.util.compiler.model.JavaMethod;
 import com.intrbiz.util.compiler.model.JavaParameter;
 import com.intrbiz.util.compiler.util.JavaUtil;
+import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Timer;
 
 public class DatabaseAdapterCompiler
 {
@@ -64,6 +68,10 @@ public class DatabaseAdapterCompiler
     private final SQLIntrospector introspector;
 
     private Map<Class<? extends Annotation>, FunctionCompiler> functionCompilers = new IdentityHashMap<Class<? extends Annotation>, FunctionCompiler>();
+    
+    // options
+    
+    private boolean withMetrics = true;
 
     private DatabaseAdapterCompiler(SQLDialect dialect, SQLIntrospector introspector)
     {
@@ -135,6 +143,19 @@ public class DatabaseAdapterCompiler
     public DatabaseAdapterCompiler setDefaultOwner(String owner)
     {
         this.dialect.setDefaultOwner(owner);
+        return this;
+    }
+    
+    // options
+    
+    public boolean isWithMetrics()
+    {
+        return this.withMetrics;
+    }
+    
+    public DatabaseAdapterCompiler setWithMetrics(boolean withMetrics)
+    {
+        this.withMetrics = withMetrics;
         return this;
     }
 
@@ -414,6 +435,16 @@ public class DatabaseAdapterCompiler
     {
         FunctionCompiler compiler = this.getFunctionCompiler(function.getFunctionType().annotationType());
         if (compiler != null) compiler.compileFunctionBinding(this, method, function);
+    }
+    
+    public static JavaField addMetricField(JavaMethod method, Function function)
+    {
+        method.getJavaClass().addImport(Timer.class.getCanonicalName());
+        method.getJavaClass().addImport(Metrics.class.getCanonicalName());
+        method.getJavaClass().addImport(TimeUnit.class.getCanonicalName());
+        JavaField metricField = method.getJavaClass().newUniqueField(Timer.class.getSimpleName(), function.getName());
+        metricField.setValue("Metrics.newTimer(" + function.getSchema().getDefinition().getSimpleName() + ".class, \"" + JavaUtil.escapeString(function.getSignature()) + "\", TimeUnit.MICROSECONDS, TimeUnit.SECONDS)");
+        return metricField;
     }
     
     /**

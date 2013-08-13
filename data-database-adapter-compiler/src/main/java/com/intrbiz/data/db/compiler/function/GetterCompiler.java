@@ -5,6 +5,7 @@ import com.intrbiz.data.db.compiler.model.Argument;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.function.GetterInfo;
+import com.intrbiz.util.compiler.model.JavaField;
 import com.intrbiz.util.compiler.model.JavaMethod;
 import com.intrbiz.util.compiler.util.JavaUtil;
 
@@ -15,13 +16,19 @@ public class GetterCompiler implements FunctionCompiler
     public void compileFunctionBinding(DatabaseAdapterCompiler compiler, JavaMethod method, Function function)
     {
         GetterInfo info = (GetterInfo) function.getIntrospectionInformation();
+        // metrics
+        JavaField  metricField = null;
+        if (compiler.isWithMetrics()) metricField = DatabaseAdapterCompiler.addMetricField(method, function);
         //
         StringBuilder s = method.getCode();
         //
         String objType = function.getReturnType().getDefaultJavaType().getSimpleName();
         method.getJavaClass().addImport(function.getReturnType().getDefaultJavaType().getCanonicalName());
         //
-        s.append("return this.connection.use(new DatabaseCall<").append(method.getReturnType()).append(">() {\r\n");
+        s.append("return this.connection.");
+        if (compiler.isWithMetrics()) s.append("useTimed(this.").append(metricField.getName()).append(", ");
+        else s.append("use(");
+        s.append("new DatabaseCall<").append(method.getReturnType()).append(">() {\r\n");
         s.append("  public ").append(method.getReturnType()).append(" run(final Connection with) throws SQLException, DataException {\r\n");
         //
         if (function.isReturnsList()) s.append("    List<").append(objType).append("> ret = new LinkedList<").append(objType).append(">();\r\n");
