@@ -40,9 +40,9 @@ public class Version implements Comparable<Version>
     
     public Version(SQLVersion version)
     {
-        this.major = version.major();
-        this.minor = version.minor();
-        this.patch = version.patch();
+        this.major = version.value()[0];
+        this.minor = version.value()[1];
+        this.patch = version.value()[2];
     }
     
     /**

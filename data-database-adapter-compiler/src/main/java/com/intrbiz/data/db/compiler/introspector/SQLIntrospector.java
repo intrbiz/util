@@ -308,6 +308,12 @@ public class SQLIntrospector
     }
 
     //
+    
+    public static void assertSQLTable(Class<?> cls)
+    {
+        SQLTable table = cls.getAnnotation(SQLTable.class);
+        if (table == null) throw new RuntimeException("The class " + cls.getCanonicalName() + " must be annotated with SQLTable()");
+    }
 
     public static String getSchemaName(Class<?> cls)
     {
@@ -354,7 +360,7 @@ public class SQLIntrospector
         return List.class == method.getReturnType();
     }
 
-    public static Class<?> functionReturnType(Method method)
+    /*public static Class<?> functionReturnType(Method method)
     {
         if (returnsList(method))
         {
@@ -363,7 +369,7 @@ public class SQLIntrospector
             return type;
         }
         return method.getReturnType();
-    }
+    }*/
     
     @SuppressWarnings("unchecked")
     public static <T extends Annotation> T getParameterAnnotation(Annotation[] annotations, Class<T> type)

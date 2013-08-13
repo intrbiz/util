@@ -9,4 +9,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @SQLFunction()
 public @interface SQLRemove {
+    String name();
+    Class<?> table();
+    SQLVersion since();
 }

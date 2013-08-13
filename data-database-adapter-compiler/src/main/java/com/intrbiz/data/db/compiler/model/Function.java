@@ -24,6 +24,8 @@ public class Function
     private Annotation functionType;
 
     private Object introspectionInformation;
+    
+    private Version since;
 
     public Function()
     {
@@ -145,4 +147,14 @@ public class Function
     {
         this.introspectionInformation = introspectionInformation;
     }
+
+    public Version getSince()
+    {
+        return since;
+    }
+
+    public void setSince(Version since)
+    {
+        this.since = since;
+    }    
 }

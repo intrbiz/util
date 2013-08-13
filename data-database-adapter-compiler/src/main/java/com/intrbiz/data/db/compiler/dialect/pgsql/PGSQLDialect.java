@@ -2,6 +2,7 @@ package com.intrbiz.data.db.compiler.dialect.pgsql;
 
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.Set;
 import java.util.UUID;
 
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
@@ -25,6 +26,7 @@ import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
 import com.intrbiz.data.db.compiler.util.SQLCommand;
 import com.intrbiz.data.db.compiler.util.SQLScript;
+import com.intrbiz.data.db.util.DBUtil;
 
 public class PGSQLDialect extends SQLDialect
 {
@@ -46,14 +48,20 @@ public class PGSQLDialect extends SQLDialect
 
     private static final SQLType TYPE_UUID = new SQLSimpleType("UUID", "String", UUID.class)
     {
-        public String setBinding(String p, int idx, String value)
+        public void addImports(Set<String> imports)
         {
-            return p + "stmt.setString(" + idx + ", " + value + " == null ? null : " + value + ".toString());\r\n";
+            imports.add(UUID.class.getCanonicalName());
+            imports.add(DBUtil.class.getCanonicalName());
+        }
+        
+        public String setBinding(int idx, String value)
+        {
+            return "DBUtil.setUUID(stmt, " + idx + ", " + value + ")";
         }
 
         public String getBinding(int idx)
         {
-            return "rs.getString(" + idx + ") == null ? null : UUID.fromString(rs.getString(" + idx + "))";
+            return "DBUtil.getUUID(rs, " + idx + ")";
         }
     };
 

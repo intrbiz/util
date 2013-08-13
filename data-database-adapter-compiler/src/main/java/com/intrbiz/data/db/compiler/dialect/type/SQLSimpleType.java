@@ -1,5 +1,7 @@
 package com.intrbiz.data.db.compiler.dialect.type;
 
+import java.util.Set;
+
 public class SQLSimpleType implements SQLType
 {
     private final String sqlType;
@@ -33,9 +35,13 @@ public class SQLSimpleType implements SQLType
         return this.javaTypes[0];
     }
     
-    public String setBinding(String p, int idx, String value)
+    public void addImports(Set<String> imports)
     {
-        return p + "stmt.set" + this.jdbcAccessor + "(" + idx + ", " + value + ");\r\n";
+    }
+    
+    public String setBinding(int idx, String value)
+    {
+        return "stmt.set" + this.jdbcAccessor + "(" + idx + ", " + value + ")";
     }
     
     public String getBinding(int idx)

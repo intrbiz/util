@@ -1,5 +1,7 @@
 package com.intrbiz.data.db.compiler.dialect.type;
 
+import java.util.Set;
+
 import com.intrbiz.data.db.compiler.model.Type;
 
 public class SQLCompositeType implements SQLType
@@ -32,7 +34,11 @@ public class SQLCompositeType implements SQLType
         return new Class<?>[] { this.javaType };
     }
     
-    public String setBinding(String p, int idx, String value)
+    public void addImports(Set<String> imports)
+    {
+    }
+    
+    public String setBinding(int idx, String value)
     {
         throw new RuntimeException("Cannot bind a composite type");
     }

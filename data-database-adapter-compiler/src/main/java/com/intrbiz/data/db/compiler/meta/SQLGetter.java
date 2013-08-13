@@ -10,6 +10,9 @@ import java.lang.annotation.Target;
 @SQLFunction()
 public @interface SQLGetter
 {
+    String name();
+    Class<?> table();
     SQLOrder[] orderBy() default {};
     SQLQuery[] query() default {};
+    SQLVersion since();
 }

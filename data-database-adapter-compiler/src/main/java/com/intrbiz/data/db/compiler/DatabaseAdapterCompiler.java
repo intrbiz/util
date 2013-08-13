@@ -11,7 +11,6 @@ import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
@@ -46,6 +45,7 @@ import com.intrbiz.util.compiler.CompilerTool;
 import com.intrbiz.util.compiler.model.JavaClass;
 import com.intrbiz.util.compiler.model.JavaMethod;
 import com.intrbiz.util.compiler.model.JavaParameter;
+import com.intrbiz.util.compiler.util.JavaUtil;
 
 public class DatabaseAdapterCompiler
 {
@@ -179,6 +179,8 @@ public class DatabaseAdapterCompiler
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
         //
+        if (installedVersion.isAfter(schema.getVersion())) throw new RuntimeException("Cannot upgrade a schema to a previous version (" + installedVersion + " => " + schema.getVersion() + ").");
+        //
         SQLScriptSet set = new SQLScriptSet();
         // upgrade the version info function
         set.add(this.dialect.writeCreateSchemaVersionFunction(schema));
@@ -201,7 +203,7 @@ public class DatabaseAdapterCompiler
         // run any table / type upgrade scripts
         for (Patch patch : schema.getPatches())
         {
-            if (ScriptType.UPGRADE == patch.getType() && patch.getVersion().isAfterOrEqual(installedVersion))
+            if (ScriptType.UPGRADE == patch.getType() && patch.getVersion().isAfter(installedVersion))
             {
                 set.add(patch.getScript());
             }
@@ -231,8 +233,8 @@ public class DatabaseAdapterCompiler
     public boolean isSchemaUptoDate(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
-        String installedVersion = database.getDatabaseModuleVersion(this.dialect.getSchemaVersionQuery(schema));
-        return schema.getVersion().equals(installedVersion);
+        Version installedVersion = this.getInstalledVersion(database, cls);
+        return schema.getVersion().isBeforeOrEqual(installedVersion);
     }
 
     public void executeSchema(DatabaseConnection database, final SQLScriptSet schemaScript)
@@ -287,7 +289,8 @@ public class DatabaseAdapterCompiler
             // check if the schema is installed
             if (!this.isSchemaInstalled(database, cls))
             {
-                logger.info("Installing database schema");
+                Schema schema = this.introspector.buildSchema(this.dialect, cls);
+                logger.info("Installing database schema version " + schema.getVersion() + ".");
                 this.installSchema(database, cls);
             }
             else
@@ -295,12 +298,16 @@ public class DatabaseAdapterCompiler
                 // check the installed schema is upto date
                 if (!this.isSchemaUptoDate(database, cls))
                 {
-                    logger.info("Upgrading database schema");
+                    Schema schema = this.introspector.buildSchema(this.dialect, cls);
+                    Version installedVersion = this.getInstalledVersion(database, cls);
+                    logger.info("Upgrading database schema from version " + installedVersion + " to version " + schema.getVersion() + ".");
                     this.upgradeSchema(database, cls);
                 }
                 else
                 {
-                    logger.info("The installed database schema is upto date");
+                    Schema schema = this.introspector.buildSchema(this.dialect, cls);
+                    Version installedVersion = this.getInstalledVersion(database, cls);
+                    logger.info("The installed database schema is upto date: schema version " + installedVersion + " adapter version " + schema.getVersion() + ".");
                 }
             }
         }
@@ -353,7 +360,6 @@ public class DatabaseAdapterCompiler
         impl.addImport(PreparedStatement.class.getCanonicalName());
         impl.addImport(ResultSet.class.getCanonicalName());
         impl.addImport(SQLException.class.getCanonicalName());
-        impl.addImport(UUID.class.getCanonicalName());
         impl.addImport(Exception.class.getCanonicalName());
         // super class
         impl.setSuperClass(cls.getSimpleName());
@@ -394,14 +400,14 @@ public class DatabaseAdapterCompiler
     protected void compileSchemaName(JavaClass impl, Schema schema)
     {
         JavaMethod jm = impl.newMethod("String", "getDatabaseModuleName");
-        jm.append("return this.connection.getDatabaseModuleName(\"").append(escapeString(this.dialect.getSchemaNameQuery(schema)) + "\");\r\n");
+        jm.append("return this.connection.getDatabaseModuleName(\"").append(JavaUtil.escapeString(this.dialect.getSchemaNameQuery(schema)) + "\");\r\n");
 
     }
 
     protected void compileSchemaVersion(JavaClass impl, Schema schema)
     {
         JavaMethod jm = impl.newMethod("String", "getDatabaseModuleVersion");
-        jm.append("return this.connection.getDatabaseModuleName(\"").append(escapeString(this.dialect.getSchemaVersionQuery(schema)) + "\");\r\n");
+        jm.append("return this.connection.getDatabaseModuleName(\"").append(JavaUtil.escapeString(this.dialect.getSchemaVersionQuery(schema)) + "\");\r\n");
     }
 
     protected void compileMethodBinding(JavaMethod method, Function function)
@@ -409,9 +415,30 @@ public class DatabaseAdapterCompiler
         FunctionCompiler compiler = this.getFunctionCompiler(function.getFunctionType().annotationType());
         if (compiler != null) compiler.compileFunctionBinding(this, method, function);
     }
-
-    public static String escapeString(String str)
+    
+    /**
+     * Quick and dirty utility to output schemas etc
+     */
+    @SuppressWarnings("unchecked")
+    public static void main(String[] args) throws Exception
     {
-        return str.replace("\"", "\\\"");
+        String action = args[0];
+        String clsName = args[1];
+        //
+        Class<? extends DatabaseAdapter> cls = (Class<? extends DatabaseAdapter>) Class.forName(clsName);
+        //
+        if ("install".equals(action))
+        {
+            DatabaseAdapterCompiler compiler = DatabaseAdapterCompiler.defaultPGSQLCompiler();
+            SQLScriptSet script = compiler.compileInstallSchema(cls);
+            System.out.println(script.toString());
+        }
+        else if ("upgrade".equals(action))
+        {
+            Version installedVersion = new Version(args[2]);
+            DatabaseAdapterCompiler compiler = DatabaseAdapterCompiler.defaultPGSQLCompiler();
+            SQLScriptSet script = compiler.compileUpgradeSchema(cls, installedVersion);
+            System.out.println(script.toString());
+        }
     }
 }

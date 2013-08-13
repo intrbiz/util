@@ -14,6 +14,8 @@ public class Column implements Comparable<Column>
 
     private Field definition;
 
+    private Version since;
+
     public Column()
     {
         super();
@@ -77,6 +79,16 @@ public class Column implements Comparable<Column>
     public void setDefinition(Field definition)
     {
         this.definition = definition;
+    }
+
+    public Version getSince()
+    {
+        return since;
+    }
+
+    public void setSince(Version since)
+    {
+        this.since = since;
     }
 
     @Override

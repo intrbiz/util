@@ -3,7 +3,6 @@ package com.intrbiz.data.db.compiler.dialect.pgsql.function;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
 import com.intrbiz.data.db.compiler.model.Argument;
-import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.function.RemoveInfo;
@@ -32,11 +31,11 @@ public class RemoveGenerator implements SQLFunctionGenerator
         // pkey
         to.write(" WHERE ");
         boolean ns = false;
-        for (Column col : table.getPrimaryKey().getColumns())
+        for (Argument arg : function.getArguments())
         {
             if (ns) to.write(" AND ");
             // cheat
-            to.writeid(col.getName()).write(" = ").writeid("p_" + col.getName());
+            to.writeid(arg.getShadowOf().getName()).write(" = ").writeid("p_" + arg.getName());
             ns = true;
         }
         to.writeln(";");

@@ -22,26 +22,28 @@ import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
 import com.intrbiz.data.db.compiler.model.function.GetterInfo;
-import com.intrbiz.data.db.compiler.util.TextUtil;
 
 public class GetterIntrospector implements SQLFunctionIntrospector
 {
     @Override
     public Function buildFunction(SQLIntrospector introspector, SQLDialect dialect, Method method, Annotation sqlFunction, Class<? extends DatabaseAdapter> cls, Schema schema)
     {
-        Function function = new Function(schema, TextUtil.camelCaseToUnderscores(method.getName()), method, sqlFunction);
+        SQLGetter getter = (SQLGetter) sqlFunction;
+        SQLIntrospector.assertSQLTable(getter.table());
+        //
+        Function function = new Function(schema, getter.name(), method, sqlFunction);
         GetterInfo info = new GetterInfo();
         function.setIntrospectionInformation(info);
-        //
-        SQLGetter getter = (SQLGetter) sqlFunction;
-        //
         // return type should be a table type
         if (void.class == method.getReturnType() || method.getReturnType() == null) throw new RuntimeException("The method " + method + " must return something.");
         function.setReturnsList(SQLIntrospector.returnsList(method));
-        Class<?> returnType = SQLIntrospector.functionReturnType(method);
-        Type type = introspector.buildType(dialect, returnType, schema);
-        Table table = introspector.buildTable(dialect, returnType, schema);
-        function.setReturnType(new SQLCompositeType(type, returnType));
+        // validate return type
+        if ((! function.isReturnsList()) && getter.table() != method.getReturnType()) throw new RuntimeException("The method " + method + " must return " + getter.table().getCanonicalName() + ".");
+        // the table type
+        Class<?> tableCls = getter.table();
+        Type type = introspector.buildType(dialect, tableCls, schema);
+        Table table = introspector.buildTable(dialect, tableCls, schema);
+        function.setReturnType(new SQLCompositeType(type, tableCls));
         info.setTable(table);
         // arguments
         Class<?>[] argTypes = method.getParameterTypes();
@@ -59,7 +61,7 @@ public class GetterIntrospector implements SQLFunctionIntrospector
                 SQLType sqlType = dialect.getType(argType);
                 // find the column
                 Column col = table.findColumn(param.value());
-                if (col == null) throw new RuntimeException("The parameter " + param.value() + " of method " + method + " has no corresponding column in table " + table.getName());
+                if (col == null) throw new RuntimeException("The parameter " + param.value() + " of method " + method + " has no corresponding column in table " + table.getName() + ".");
                 // add the argument
                 Argument arg = new Argument(idx++, param.value(), sqlType, argType, col);
                 arg.setOptional(param.optional());

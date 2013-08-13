@@ -9,5 +9,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @SQLFunction()
 public @interface SQLSetter {
+    String name();
+    Class<?> table();
     boolean upsert() default true;
+    SQLVersion since();
 }

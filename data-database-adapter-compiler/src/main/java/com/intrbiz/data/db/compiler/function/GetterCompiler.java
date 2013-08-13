@@ -5,10 +5,8 @@ import com.intrbiz.data.db.compiler.model.Argument;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.function.GetterInfo;
-import com.intrbiz.data.db.compiler.util.TextUtil;
 import com.intrbiz.util.compiler.model.JavaMethod;
-
-import static com.intrbiz.data.db.compiler.DatabaseAdapterCompiler.escapeString;
+import com.intrbiz.util.compiler.util.JavaUtil;
 
 public class GetterCompiler implements FunctionCompiler
 {
@@ -28,13 +26,14 @@ public class GetterCompiler implements FunctionCompiler
         //
         if (function.isReturnsList()) s.append("    List<").append(objType).append("> ret = new LinkedList<").append(objType).append(">();\r\n");
         //
-        s.append("    try (PreparedStatement stmt = with.prepareStatement(\"").append(escapeString(compiler.getDialect().getFunctionCallQuery(function).toString())).append("\"))\r\n");
+        s.append("    try (PreparedStatement stmt = with.prepareStatement(\"").append(JavaUtil.escapeString(compiler.getDialect().getFunctionCallQuery(function).toString())).append("\"))\r\n");
         s.append("    {\r\n");
         // bind params
         int idx = 0;
         for (Argument arg : function.getArguments())
         {
-            s.append(arg.getType().setBinding("      ", idx + 1, "p" + idx));
+            arg.getType().addImports(method.getJavaClass().getImports());
+            s.append("      ").append(arg.getType().setBinding(idx + 1, "p" + idx)).append(";\r\n");
             idx++;
         }
         // execute
@@ -50,9 +49,8 @@ public class GetterCompiler implements FunctionCompiler
         idx = 0;
         for (Column col : info.getTable().getColumns())
         {
-            s.append("          obj.set").append(TextUtil.ucFirst(col.getDefinition().getName())).append("(");
-            s.append(col.getType().getBinding(idx + 1));
-            s.append(");\r\n");
+            col.getType().addImports(method.getJavaClass().getImports());
+            s.append("          obj.").append(JavaUtil.setterName(col.getDefinition())).append("(").append(col.getType().getBinding(idx + 1)).append(");\r\n");
             idx++;
         }
         // return

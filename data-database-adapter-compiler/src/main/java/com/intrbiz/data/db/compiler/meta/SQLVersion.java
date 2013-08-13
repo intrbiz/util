@@ -8,7 +8,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface SQLVersion {
-    int major();
-    int minor();
-    int patch() default 0;
+    int[] value();
 }

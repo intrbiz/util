@@ -12,4 +12,5 @@ public @interface SQLColumn
     int index();
     String name();
     String type() default "";
+    SQLVersion since();
 }
