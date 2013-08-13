@@ -8,6 +8,8 @@ import java.sql.SQLException;
 import com.intrbiz.data.DataException;
 import com.intrbiz.data.Transaction;
 import com.intrbiz.util.pool.database.DatabasePool;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
 
 public class DatabaseConnection implements AutoCloseable
 {
@@ -225,6 +227,31 @@ public class DatabaseConnection implements AutoCloseable
         }
     }
 
+    public <T> T useTimed(final Timer timer, final DatabaseCall<T> call) throws DataException
+    {
+        TimerContext tCtx = timer.time();
+        try
+        {
+            Connection con = this.borrowConnection();
+            try
+            {
+                return call.run(con);
+            }
+            catch (SQLException e)
+            {
+                throw new DataException(e);
+            }
+            finally
+            {
+                this.relinquishConnection(con);
+            }
+        }
+        finally
+        {
+            tCtx.stop();
+        }
+    }
+
     /**
      * Execute the given transaction
      * 
@@ -294,7 +321,7 @@ public class DatabaseConnection implements AutoCloseable
         }
         return null;
     }
-    
+
     /**
      * Internal helper, nothing to see here
      */
