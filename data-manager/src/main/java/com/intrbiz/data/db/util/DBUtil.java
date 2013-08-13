@@ -7,13 +7,13 @@ import java.util.UUID;
 
 public class DBUtil
 {
-    public UUID getUUID(ResultSet rs, int index) throws SQLException
+    public static UUID getUUID(ResultSet rs, int index) throws SQLException
     {
         String value = rs.getString(1);
         return value == null ? null : UUID.fromString(value);
     }
     
-    public void setUUID(PreparedStatement stmt, int index, UUID value) throws SQLException
+    public static void setUUID(PreparedStatement stmt, int index, UUID value) throws SQLException
     {
         stmt.setString(index, value == null ? null : value.toString());
     }
@@ -23,7 +23,7 @@ public class DBUtil
         public T get(ResultSet rs, int index) throws SQLException;
     }
     
-    public <T> T getValue(ResultSet rs, int index, DBGetter<T> getter) throws SQLException
+    public static <T> T getValue(ResultSet rs, int index, DBGetter<T> getter) throws SQLException
     {
         return getter.get(rs, index);
     }
@@ -33,7 +33,7 @@ public class DBUtil
         public void set(final PreparedStatement stmt, int index, T value) throws SQLException;
     }
     
-    public <T> void getValue(PreparedStatement stmt, int index, T value, DBSetter<T> setter) throws SQLException
+    public static <T> void getValue(PreparedStatement stmt, int index, T value, DBSetter<T> setter) throws SQLException
     {
         setter.set(stmt, index, value);
     }
