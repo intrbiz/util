@@ -61,7 +61,7 @@ public final class DataManager
     
     // adapters
     
-    public <T extends DatabaseAdapter> void registerDatabaseAdapter2(Class<T> type, DatabaseAdapterFactory<T> factory)
+    public <T extends DatabaseAdapter> void registerDatabaseAdapter(Class<T> type, DatabaseAdapterFactory<T> factory)
     {
         this.databaseAdapters.put(type, factory);
     }
