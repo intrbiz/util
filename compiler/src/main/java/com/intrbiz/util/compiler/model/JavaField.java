@@ -8,6 +8,8 @@ public class JavaField
 
     private String name;
 
+    private String value;
+
     public JavaField()
     {
         super();
@@ -41,9 +43,10 @@ public class JavaField
         return type;
     }
 
-    public void setType(String type)
+    public JavaField setType(String type)
     {
         this.type = type;
+        return this;
     }
 
     public String getName()
@@ -51,13 +54,32 @@ public class JavaField
         return name;
     }
 
-    public void setName(String name)
+    public JavaField setName(String name)
     {
         this.name = name;
+        return this;
     }
-    
+
+    public String getValue()
+    {
+        return value;
+    }
+
+    public JavaField setValue(String value)
+    {
+        this.value = value;
+        return this;
+    }
+
     public String toJava(String p)
     {
-        return p + "private " + this.getType() + " " + this.getName() + ";\r\n";
+        StringBuilder sb = new StringBuilder();
+        sb.append(p).append("private ").append(this.getType()).append(" ").append(this.getName());
+        if (this.getValue() != null)
+        {
+            sb.append(" = ").append(this.getValue());
+        }
+        sb.append(";\r\n");
+        return sb.toString();
     }
 }

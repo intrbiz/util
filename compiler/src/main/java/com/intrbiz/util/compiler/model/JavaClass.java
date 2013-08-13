@@ -119,6 +119,16 @@ public class JavaClass
         this.fields = fields;
     }
     
+    public JavaField findField(String name)
+    {
+        for (JavaField field : this.fields)
+        {
+            if (name.equals(field.getName()))
+                return field;
+        }
+        return null;
+    }
+    
     public JavaField addField(JavaField field)
     {
         this.fields.add(field);
@@ -129,6 +139,17 @@ public class JavaClass
     public JavaField newField(String type, String name)
     {
         return this.addField(new JavaField(this, type, name));
+    }
+    
+    public JavaField newUniqueField(String type, String name)
+    {
+        String uname = name;
+        int i = 0;
+        while (this.findField(uname) != null)
+        {
+            uname = name + (i++);
+        }
+        return this.newField(type, uname);
     }
 
     public List<JavaConstructor> getConstructors()

@@ -49,7 +49,7 @@ public final class CompilerTool
         //
         try
         {
-            this.base = Files.createTempDirectory("intrbiz-rt-classes-").toFile();
+            this.base = Files.createTempDirectory("intrbiz-rt-classes-" + System.currentTimeMillis() + "-").toFile();
             logger.trace("Using " + this.base + " as compilation directory");
             // set the output directory
             this.fileManager.setLocation(StandardLocation.CLASS_OUTPUT, Arrays.asList(new File[]{ this.base }));
