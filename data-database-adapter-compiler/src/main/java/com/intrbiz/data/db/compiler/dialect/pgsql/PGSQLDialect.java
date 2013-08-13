@@ -1,10 +1,7 @@
 package com.intrbiz.data.db.compiler.dialect.pgsql;
 
-import java.lang.annotation.Annotation;
 import java.sql.Date;
 import java.sql.Timestamp;
-import java.util.IdentityHashMap;
-import java.util.Map;
 import java.util.UUID;
 
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
@@ -29,7 +26,7 @@ import com.intrbiz.data.db.compiler.model.Type;
 import com.intrbiz.data.db.compiler.util.SQLCommand;
 import com.intrbiz.data.db.compiler.util.SQLScript;
 
-public class PGSQLDialect implements SQLDialect
+public class PGSQLDialect extends SQLDialect
 {
     private static final SQLType TYPE_TEXT = new SQLSimpleType("TEXT", "String", String.class);
 
@@ -60,57 +57,14 @@ public class PGSQLDialect implements SQLDialect
         }
     };
 
-    //
-
-    private Map<Class<? extends Annotation>, SQLFunctionGenerator> functionGenerators = new IdentityHashMap<Class<? extends Annotation>, SQLFunctionGenerator>();
-
-    //
-
-    private String owner = "postgres";
-
     public PGSQLDialect()
     {
-        super();
+        super("PGSQL", "postgres");
         // register default generators
         this.registerFunctionGenerator(SQLGetter.class, new GetterGenerator());
         this.registerFunctionGenerator(SQLSetter.class, new SetterGenerator());
         this.registerFunctionGenerator(SQLRemove.class, new RemoveGenerator());
     }
-
-    @Override
-    public void registerFunctionGenerator(Class<? extends Annotation> type, SQLFunctionGenerator generator)
-    {
-        this.functionGenerators.put(type, generator);
-    }
-
-    protected SQLFunctionGenerator getFunctionGenerator(Class<? extends Annotation> type)
-    {
-        return this.functionGenerators.get(type);
-    }
-
-    //
-
-    @Override
-    public String getDialectName()
-    {
-        return "PGSQL";
-    }
-
-    //
-
-    @Override
-    public String getOwner()
-    {
-        return this.owner;
-    }
-
-    @Override
-    public void setOwner(String owner)
-    {
-        this.owner = owner;
-    }
-
-    //
 
     @Override
     public SQLType getType(Class<?> javaClass)

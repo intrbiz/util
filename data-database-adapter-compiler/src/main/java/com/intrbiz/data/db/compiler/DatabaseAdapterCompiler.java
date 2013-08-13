@@ -53,6 +53,11 @@ public class DatabaseAdapterCompiler
     {
         return new DatabaseAdapterCompiler(new PGSQLDialect());
     }
+    
+    public static final DatabaseAdapterCompiler defaultPGSQLCompiler(String defaultOwner)
+    {
+        return new DatabaseAdapterCompiler(new PGSQLDialect()).setDefaultOwner(defaultOwner);
+    }
 
     private final SQLDialect dialect;
 
@@ -86,24 +91,51 @@ public class DatabaseAdapterCompiler
         return introspector;
     }
 
-    public void registerFunctionGenerator(Class<? extends Annotation> type, SQLFunctionGenerator generator)
+    public DatabaseAdapterCompiler registerFunctionGenerator(Class<? extends Annotation> type, SQLFunctionGenerator generator)
     {
         this.dialect.registerFunctionGenerator(type, generator);
+        return this;
     }
 
-    public void registerFunctionIntrospector(Class<? extends Annotation> type, SQLFunctionIntrospector introspector)
+    public DatabaseAdapterCompiler registerFunctionIntrospector(Class<? extends Annotation> type, SQLFunctionIntrospector introspector)
     {
         this.introspector.registerFunctionIntrospector(type, introspector);
+        return this;
     }
 
-    public void registerFunctionCompiler(Class<? extends Annotation> type, FunctionCompiler compiler)
+    public DatabaseAdapterCompiler registerFunctionCompiler(Class<? extends Annotation> type, FunctionCompiler compiler)
     {
         this.functionCompilers.put(type, compiler);
+        return this;
     }
 
     protected FunctionCompiler getFunctionCompiler(Class<? extends Annotation> type)
     {
         return this.functionCompilers.get(type);
+    }
+    
+    // owner
+    
+    public String getOwner()
+    {
+        return this.dialect.getOwner();
+    }
+    
+    public DatabaseAdapterCompiler setOwner(String owner)
+    {
+        this.dialect.setOwner(owner);
+        return this;
+    }
+    
+    public String getDefaultOwner()
+    {
+        return this.getDefaultOwner();
+    }
+    
+    public DatabaseAdapterCompiler setDefaultOwner(String owner)
+    {
+        this.dialect.setDefaultOwner(owner);
+        return this;
     }
 
     // schema
@@ -143,7 +175,7 @@ public class DatabaseAdapterCompiler
         return set;
     }
 
-    public SQLScriptSet compileUpgradeSchema(Class<? extends DatabaseAdapter> cls, Version currentVersion)
+    public SQLScriptSet compileUpgradeSchema(Class<? extends DatabaseAdapter> cls, Version installedVersion)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
         //
@@ -153,16 +185,15 @@ public class DatabaseAdapterCompiler
         // install any new tables
         for (Table table : schema.getTables())
         {
-            if (table.getSince().isAfter(currentVersion))
+            if (table.getSince().isAfter(installedVersion))
             {
                 set.add(this.dialect.writeCreateTable(table));
             }
         }
         // install any new types
-        // TODO: drop all types and reinstall?
         for (Type type : schema.getTypes())
         {
-            if (type.getSince().isAfter(currentVersion))
+            if (type.getSince().isAfter(installedVersion))
             {
                 set.add(this.dialect.writeCreateType(type));
             }
@@ -170,12 +201,12 @@ public class DatabaseAdapterCompiler
         // run any table / type upgrade scripts
         for (Patch patch : schema.getPatches())
         {
-            if (ScriptType.UPGRADE == patch.getType() && patch.getVersion().isAfterOrEqual(currentVersion))
+            if (ScriptType.UPGRADE == patch.getType() && patch.getVersion().isAfterOrEqual(installedVersion))
             {
                 set.add(patch.getScript());
             }
         }
-        // install all functions
+        // update or install functions
         for (Function function : schema.getFunctions())
         {
             set.add(this.dialect.writeCreateFunction(function));
@@ -243,6 +274,11 @@ public class DatabaseAdapterCompiler
         this.executeSchema(database, set);
     }
 
+    /**
+     * Install or upgrade the given database to the current version
+     * @param database
+     * @param cls
+     */
     public void install(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
     {
         Logger logger = Logger.getLogger(DatabaseAdapterCompiler.class);
