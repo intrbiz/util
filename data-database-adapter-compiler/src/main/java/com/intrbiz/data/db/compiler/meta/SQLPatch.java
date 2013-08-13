@@ -26,7 +26,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface SQLPatch {
-    String dialect() default "SQL"; // the dialect of the patch
+    String name();
+    int index();
     ScriptType type();              // install or upgrade
     SQLVersion version();              // target version
     boolean skip() default false;   // can this patch be skipped if the upgrade is jumping many versions

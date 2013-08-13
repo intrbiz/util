@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.log4j.Logger;
+
 import com.intrbiz.data.DataException;
 import com.intrbiz.data.DataManager.DatabaseAdapterFactory;
 import com.intrbiz.data.db.DatabaseAdapter;
@@ -30,10 +32,13 @@ import com.intrbiz.data.db.compiler.introspector.function.SQLFunctionIntrospecto
 import com.intrbiz.data.db.compiler.meta.SQLGetter;
 import com.intrbiz.data.db.compiler.meta.SQLRemove;
 import com.intrbiz.data.db.compiler.meta.SQLSetter;
+import com.intrbiz.data.db.compiler.meta.ScriptType;
 import com.intrbiz.data.db.compiler.model.Function;
+import com.intrbiz.data.db.compiler.model.Patch;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
+import com.intrbiz.data.db.compiler.model.Version;
 import com.intrbiz.data.db.compiler.util.SQLCommand;
 import com.intrbiz.data.db.compiler.util.SQLScript;
 import com.intrbiz.data.db.compiler.util.SQLScriptSet;
@@ -102,8 +107,7 @@ public class DatabaseAdapterCompiler
     }
 
     // schema
-
-    public SQLScriptSet compileSchema(Class<? extends DatabaseAdapter> cls)
+    public SQLScriptSet compileInstallSchema(Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
         //
@@ -128,39 +132,92 @@ public class DatabaseAdapterCompiler
         {
             set.add(this.dialect.writeCreateFunction(function));
         }
+        // add any install patches for this version
+        for (Patch patch : schema.getPatches())
+        {
+            if (ScriptType.INSTALL == patch.getType() && patch.getVersion().equals(schema.getVersion()))
+            {
+                set.add(patch.getScript());
+            }
+        }
         return set;
     }
-    
+
+    public SQLScriptSet compileUpgradeSchema(Class<? extends DatabaseAdapter> cls, Version currentVersion)
+    {
+        Schema schema = this.introspector.buildSchema(this.dialect, cls);
+        //
+        SQLScriptSet set = new SQLScriptSet();
+        // upgrade the version info function
+        set.add(this.dialect.writeCreateSchemaVersionFunction(schema));
+        // install any new tables
+        for (Table table : schema.getTables())
+        {
+            if (table.getSince().isAfter(currentVersion))
+            {
+                set.add(this.dialect.writeCreateTable(table));
+            }
+        }
+        // install any new types
+        // TODO: drop all types and reinstall?
+        for (Type type : schema.getTypes())
+        {
+            if (type.getSince().isAfter(currentVersion))
+            {
+                set.add(this.dialect.writeCreateType(type));
+            }
+        }
+        // run any table / type upgrade scripts
+        for (Patch patch : schema.getPatches())
+        {
+            if (ScriptType.UPGRADE == patch.getType() && patch.getVersion().isAfterOrEqual(currentVersion))
+            {
+                set.add(patch.getScript());
+            }
+        }
+        // install all functions
+        for (Function function : schema.getFunctions())
+        {
+            set.add(this.dialect.writeCreateFunction(function));
+        }
+        return set;
+    }
+
     public boolean isSchemaInstalled(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
         String installedName = database.getDatabaseModuleName(this.dialect.getSchemaNameQuery(schema));
         return installedName != null;
     }
-    
+
+    public Version getInstalledVersion(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
+    {
+        Schema schema = this.introspector.buildSchema(this.dialect, cls);
+        String installedVersion = database.getDatabaseModuleVersion(this.dialect.getSchemaVersionQuery(schema));
+        return installedVersion == null ? null : new Version(installedVersion);
+    }
+
     public boolean isSchemaUptoDate(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
-        // get the installed version
         String installedVersion = database.getDatabaseModuleVersion(this.dialect.getSchemaVersionQuery(schema));
-        //
         return schema.getVersion().equals(installedVersion);
     }
 
-    public void installSchema(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
+    public void executeSchema(DatabaseConnection database, final SQLScriptSet schemaScript)
     {
-        final SQLScriptSet set = this.compileSchema(cls);
-        //
+        final Logger logger = Logger.getLogger(DatabaseAdapterCompiler.class);
         database.execute(new DatabaseCall<Void>()
         {
             public Void run(final Connection with) throws SQLException
             {
-                for (SQLScript script : set.getScripts())
+                for (SQLScript script : schemaScript.getScripts())
                 {
                     for (SQLCommand command : script.getCommands())
                     {
                         try (Statement stmt = with.createStatement())
                         {
+                            if (logger.isTraceEnabled()) logger.trace("Executing: " + command.toString() + ";");
                             stmt.execute(command.toString());
                         }
                     }
@@ -168,6 +225,53 @@ public class DatabaseAdapterCompiler
                 return null;
             }
         });
+    }
+
+    public void installSchema(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
+    {
+        SQLScriptSet set = this.compileInstallSchema(cls);
+        this.executeSchema(database, set);
+    }
+
+    public void upgradeSchema(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
+    {
+        // get the installed version
+        Version installedVersion = this.getInstalledVersion(database, cls);
+        // get the upgrade script
+        SQLScriptSet set = this.compileUpgradeSchema(cls, installedVersion);
+        // execute it
+        this.executeSchema(database, set);
+    }
+
+    public void install(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
+    {
+        Logger logger = Logger.getLogger(DatabaseAdapterCompiler.class);
+        try
+        {
+            // check if the schema is installed
+            if (!this.isSchemaInstalled(database, cls))
+            {
+                logger.info("Installing database schema");
+                this.installSchema(database, cls);
+            }
+            else
+            {
+                // check the installed schema is upto date
+                if (!this.isSchemaUptoDate(database, cls))
+                {
+                    logger.info("Upgrading database schema");
+                    this.upgradeSchema(database, cls);
+                }
+                else
+                {
+                    logger.info("The installed database schema is upto date");
+                }
+            }
+        }
+        catch (DataException e)
+        {
+            logger.error("Error installing database schema", e);
+        }
     }
 
     // adapter class

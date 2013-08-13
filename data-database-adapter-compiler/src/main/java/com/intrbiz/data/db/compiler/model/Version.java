@@ -44,6 +44,36 @@ public class Version implements Comparable<Version>
         this.minor = version.minor();
         this.patch = version.patch();
     }
+    
+    /**
+     * Is this version before the given version
+     * @param other
+     * @return
+     */
+    public boolean isBefore(Version other)
+    {
+        return this.compareTo(other) < 0;
+    }
+    
+    public boolean isBeforeOrEqual(Version other)
+    {
+        return this.compareTo(other) <= 0;
+    }
+    
+    /**
+     * Is this version after the given version
+     * @param other
+     * @return
+     */
+    public boolean isAfter(Version other)
+    {
+        return this.compareTo(other) > 0;
+    }
+    
+    public boolean isAfterOrEqual(Version other)
+    {
+        return this.compareTo(other) >= 0;
+    }
 
     @Override
     public int compareTo(Version o)

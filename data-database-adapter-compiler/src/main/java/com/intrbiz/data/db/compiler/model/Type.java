@@ -11,6 +11,8 @@ public class Type
 
     private List<Column> columns = new LinkedList<Column>();
 
+    private Version since;
+
     public Type()
     {
         super();
@@ -58,10 +60,20 @@ public class Type
     {
         this.columns = columns;
     }
-    
+
     public void addColumn(Column col)
     {
         this.columns.add(col);
+    }
+
+    public Version getSince()
+    {
+        return since;
+    }
+
+    public void setSince(Version since)
+    {
+        this.since = since;
     }
 
     public String toString()

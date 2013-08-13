@@ -19,6 +19,8 @@ public class Schema
 
     private Class<? extends DatabaseAdapter> definition;
 
+    private List<Patch> patches = new LinkedList<Patch>();
+
     public Schema()
     {
         super();
@@ -113,6 +115,26 @@ public class Schema
     public void setDefinition(Class<? extends DatabaseAdapter> definition)
     {
         this.definition = definition;
+    }
+
+    public List<Patch> getPatches()
+    {
+        return patches;
+    }
+
+    public void setPatches(List<Patch> patches)
+    {
+        this.patches = patches;
+    }
+    
+    public void addPatch(Patch patch)
+    {
+        this.patches.add(patch);
+    }
+    
+    public void addPatches(List<Patch> patches)
+    {
+        this.patches.addAll(patches);
     }
 
     public String toString()

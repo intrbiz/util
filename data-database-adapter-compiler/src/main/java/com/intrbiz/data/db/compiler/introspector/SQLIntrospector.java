@@ -2,7 +2,9 @@ package com.intrbiz.data.db.compiler.introspector;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedList;
@@ -21,6 +23,7 @@ import com.intrbiz.data.db.compiler.meta.SQLColumn;
 import com.intrbiz.data.db.compiler.meta.SQLForeignKey;
 import com.intrbiz.data.db.compiler.meta.SQLFunction;
 import com.intrbiz.data.db.compiler.meta.SQLGetter;
+import com.intrbiz.data.db.compiler.meta.SQLPatch;
 import com.intrbiz.data.db.compiler.meta.SQLPrimaryKey;
 import com.intrbiz.data.db.compiler.meta.SQLRemove;
 import com.intrbiz.data.db.compiler.meta.SQLSchema;
@@ -29,11 +32,13 @@ import com.intrbiz.data.db.compiler.meta.SQLTable;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.ForeignKey;
 import com.intrbiz.data.db.compiler.model.Function;
+import com.intrbiz.data.db.compiler.model.Patch;
 import com.intrbiz.data.db.compiler.model.PrimaryKey;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
 import com.intrbiz.data.db.compiler.model.Version;
+import com.intrbiz.data.db.compiler.util.SQLScript;
 import com.intrbiz.data.db.compiler.util.TextUtil;
 import com.intrbiz.metadata.ListOf;
 
@@ -77,26 +82,67 @@ public class SQLIntrospector
         {
             schema = new Schema(getSchemaName(cls), cls);
             this.schemaCache.put(cls, schema);
-            schema.setVersion(getSchemaVersion(cls));
-            this.buildTables(dialect, cls, schema);
+            //
+            SQLSchema sqlSchema = cls.getAnnotation(SQLSchema.class);
+            schema.setVersion(new Version(sqlSchema.version()));
+            // patches
+            schema.addPatches(this.buildPatches(dialect, cls));
+            for (Class<?> patchCls : sqlSchema.patches())
+            {
+                schema.addPatches(this.buildPatches(dialect, patchCls));
+            }
+            // tables
+            for (Class<?> tCls : sqlSchema.tables())
+            {
+                // build the table
+                Table table = this.buildTable(dialect, tCls, schema);
+                schema.addTable(table);
+                // build the type from the table
+                Type type = this.buildType(dialect, tCls, schema);
+                schema.addType(type);
+                // build the patches from the table
+                schema.addPatches(this.buildPatches(dialect, tCls));
+            }
+            // functions
             this.buildFunctions(dialect, cls, schema);
+            // sort the patches
+            Collections.sort(schema.getPatches());
         }
         return schema;
     }
-
-    protected void buildTables(SQLDialect dialect, Class<? extends DatabaseAdapter> cls, Schema schema)
+    
+    public List<Patch> buildPatches(SQLDialect dialect, Class<?> cls)
     {
-        SQLSchema tables = cls.getAnnotation(SQLSchema.class);
-        if (tables != null)
+        List<Patch> patches = new LinkedList<Patch>();
+        for (Method method : cls.getDeclaredMethods())
         {
-            for (Class<?> tCls : tables.tables())
+            if (Modifier.isStatic(method.getModifiers()))
             {
-                Table table = this.buildTable(dialect, tCls, schema);
-                schema.addTable(table);
-                Type type = this.buildType(dialect, tCls, schema);
-                schema.addType(type);
+                SQLPatch sqlPatch = method.getAnnotation(SQLPatch.class);
+                if (sqlPatch != null)
+                {
+                    Patch patch = new Patch();
+                    patch.setType(sqlPatch.type());
+                    patch.setName(sqlPatch.name());
+                    patch.setIndex(sqlPatch.index());
+                    patch.setVersion(new Version(sqlPatch.version()));
+                    patch.setSkip(sqlPatch.skip());
+                    //
+                    try
+                    {
+                        SQLScript script = (SQLScript) method.invoke(null, new Object[] {});
+                        patch.setScript(script);
+                    }
+                    catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
+                    {
+                        throw new RuntimeException("Failed to get SQL script: " + method);
+                    }
+                    //
+                    patches.add(patch);
+                }
             }
         }
+        return patches;
     }
 
     protected void buildFunctions(SQLDialect dialect, Class<? extends DatabaseAdapter> cls, Schema schema)
@@ -140,6 +186,7 @@ public class SQLIntrospector
             type = new Type("t_" + table.getName());
             this.typeCache.put(cls, type);
             type.setColumns(table.getColumns());
+            type.setSince(table.getSince());
         }
         return type;
     }
