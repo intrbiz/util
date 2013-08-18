@@ -20,6 +20,8 @@ public final class DataManager
     
     private ConcurrentMap<String, DatabasePool> servers = new ConcurrentHashMap<String, DatabasePool>();
     
+    private ConcurrentMap<Class<? extends DataAdapter>, DataAdapterFactory<?>> dataAdapters = new ConcurrentHashMap<Class<? extends DataAdapter>, DataAdapterFactory<?>>(); 
+    
     private ConcurrentMap<Class<? extends DatabaseAdapter>, DatabaseAdapterFactory<?>> databaseAdapters = new ConcurrentHashMap<Class<? extends DatabaseAdapter>, DatabaseAdapterFactory<?>>();
     
     private DataManager()
@@ -59,7 +61,7 @@ public final class DataManager
         return new DatabaseConnection(this.server(server));
     }
     
-    // adapters
+    // database adapters
     
     public <T extends DatabaseAdapter> void registerDatabaseAdapter(Class<T> type, DatabaseAdapterFactory<T> factory)
     {
@@ -82,10 +84,28 @@ public final class DataManager
         return this.databaseAdapter(type, this.connect(server));
     }
     
+    // data adapters
+    
+    public <T extends DataAdapter> void registerDataAdapter(Class<T> type, DataAdapterFactory<T> factory)
+    {
+        this.dataAdapters.put(type, factory);
+    }
+    
+    @SuppressWarnings("unchecked")
+    public <T extends DataAdapter> T dataAdapter(Class<T> type)
+    {
+        return (T) this.dataAdapters.get(type).create();
+    }
+    
     // factories
     
     public static interface DatabaseAdapterFactory<T extends DatabaseAdapter>
     {
         T create(DatabaseConnection con);
+    }
+    
+    public static interface DataAdapterFactory<T extends DataAdapter>
+    {
+        T create();
     }
 }
