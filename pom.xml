@@ -60,6 +60,7 @@
     <module>data-manager</module>
     <module>crypto</module>
     <module>data-database-adapter-compiler</module>
+    <module>data-annotations</module>
   </modules>
 	<dependencyManagement>
 		<dependencies>

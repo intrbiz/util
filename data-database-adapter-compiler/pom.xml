@@ -42,5 +42,10 @@
     	<artifactId>postgresql</artifactId>
     	<version>9.2-1003-jdbc4</version>
     </dependency>
+    <dependency>
+    	<groupId>com.intrbiz.util</groupId>
+    	<artifactId>data-annotations</artifactId>
+    	<version>1.0.0-SNAPSHOT</version>
+    </dependency>
   </dependencies>
 </project>
