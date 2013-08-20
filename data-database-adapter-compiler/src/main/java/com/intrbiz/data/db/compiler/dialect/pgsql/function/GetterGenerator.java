@@ -41,7 +41,7 @@ public class GetterGenerator implements SQLFunctionGenerator
         GetterInfo info = (GetterInfo) function.getIntrospectionInformation();
         Table table = info.getTable();
         // build the SQL query
-        to.write("SELECT * FROM ").writeid(table.getSchema(), table.getName());
+        to.write("SELECT ").writeColumnNameList(table.getColumns()).write(" FROM ").writeid(table.getSchema(), table.getName());
         // where clause
         if (info.isParameterised())
         {
@@ -94,8 +94,9 @@ public class GetterGenerator implements SQLFunctionGenerator
     
     public SQLCommand writefunctionBindingSQL(SQLDialect dialect, Function function)
     {
+        GetterInfo info = (GetterInfo) function.getIntrospectionInformation();
         SQLCommand to = new SQLCommand();
-        to.write("SELECT * FROM ").writeid(function.getSchema(), function.getName()).write("(");
+        to.write("SELECT ").writeColumnNameList(info.getTable().getColumns()).write(" FROM ").writeid(function.getSchema(), function.getName()).write("(");
         boolean ns = false;
         for (Argument arg : function.getArguments())
         {
@@ -105,7 +106,6 @@ public class GetterGenerator implements SQLFunctionGenerator
         }
         to.write(")");
         // order
-        GetterInfo info = (GetterInfo) function.getIntrospectionInformation();
         if (! info.getOrderBy().isEmpty())
         {
             to.write(" ORDER BY ");
