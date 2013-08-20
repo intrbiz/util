@@ -9,7 +9,7 @@ public class DBUtil
 {
     public static UUID getUUID(ResultSet rs, int index) throws SQLException
     {
-        String value = rs.getString(1);
+        String value = rs.getString(index);
         return value == null ? null : UUID.fromString(value);
     }
     
