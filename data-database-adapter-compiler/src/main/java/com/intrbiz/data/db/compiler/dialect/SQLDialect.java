@@ -1,4 +1,4 @@
-public abstract package com.intrbiz.data.db.compiler.dialect;
+package com.intrbiz.data.db.compiler.dialect;
 
 import java.lang.annotation.Annotation;
 import java.util.IdentityHashMap;
