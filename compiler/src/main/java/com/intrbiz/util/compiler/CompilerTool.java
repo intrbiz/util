@@ -45,6 +45,7 @@ public final class CompilerTool
     {
         super();
         this.compiler = ToolProvider.getSystemJavaCompiler();
+        if (this.compiler == null) throw new RuntimeException("Failed to initialise the Java Tools compiler, check that the JDK is installed.");
         this.fileManager = this.compiler.getStandardFileManager(null, null, null);
         //
         try
@@ -77,7 +78,7 @@ public final class CompilerTool
     
     public synchronized boolean compileClass(String className, String classContent)
     {
-        if (logger.isTraceEnabled())
+        if (logger.isTraceEnabled() || Boolean.getBoolean("com.intrbiz.compiler.source"))
         {
             logger.trace("Compiling Class: " + className);
             //
