@@ -1,7 +1,13 @@
 package com.intrbiz.data.db.compiler.util;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.LinkedList;
 import java.util.List;
+
+import com.intrbiz.data.DataAdapter;
 
 public class SQLScript
 {
@@ -55,5 +61,24 @@ public class SQLScript
         }
         //
         return sb.toString();
+    }
+    
+    public static final SQLScript fromResource(Class<? extends DataAdapter> adapterCls, String resourceName)
+    {
+        try (Reader r = new BufferedReader(new InputStreamReader(adapterCls.getResourceAsStream(resourceName))))
+        {
+            StringBuilder sb = new StringBuilder();
+            int l;
+            char[] b = new char[1024];
+            while ((l = r.read(b)) != -1)
+            {
+                sb.append(b, 0, l);
+            }
+            return new SQLScript(sb.toString());
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException("Failed to load the resource \"" + resourceName, e);
+        }
     }
 }
