@@ -118,6 +118,9 @@ public class SQLIntrospector
         {
             if (Modifier.isStatic(method.getModifiers()))
             {
+                // forcefully enable invocation
+                method.setAccessible(true);
+                // create the match
                 SQLPatch sqlPatch = method.getAnnotation(SQLPatch.class);
                 if (sqlPatch != null)
                 {
@@ -135,7 +138,7 @@ public class SQLIntrospector
                     }
                     catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e)
                     {
-                        throw new RuntimeException("Failed to get SQL script: " + method);
+                        throw new RuntimeException("Failed to get SQL script: " + method, e);
                     }
                     //
                     patches.add(patch);
