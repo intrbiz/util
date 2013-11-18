@@ -34,6 +34,16 @@ public class SQLCompositeType implements SQLType
         return new Class<?>[] { this.javaType };
     }
     
+    public boolean isCompatibleWith(Class<?> type)
+    {
+        for (Class<?> c : this.getJavaTypes())
+        {
+            if (type.isAssignableFrom(c))
+                return true;
+        }
+        return false;
+    }
+    
     public void addImports(Set<String> imports)
     {
     }

@@ -64,6 +64,12 @@ public class PGSQLDialect extends SQLDialect
             return "DBUtil.getUUID(rs, " + idx + ")";
         }
     };
+    
+    private static final SQLType TYPE_MACADDR = new SQLSimpleType("MACADDR", "String", String.class);
+    
+    private static final SQLType TYPE_CIDR = new SQLSimpleType("CIDR", "String", String.class);
+    
+    private static final SQLType TYPE_INET = new SQLSimpleType("INET", "String", String.class);
 
     public PGSQLDialect()
     {
@@ -96,6 +102,35 @@ public class PGSQLDialect extends SQLDialect
         else if (UUID.class == javaClass) 
             return TYPE_UUID;
         throw new RuntimeException("Cannot get SQL type for java class: " + javaClass.getCanonicalName());
+    }
+    
+    public SQLType getType(String sqlType)
+    {
+        if ("TEXT".equalsIgnoreCase(sqlType) || "VARCHAR".equalsIgnoreCase(sqlType))
+            return TYPE_TEXT;
+        else if ("INT".equalsIgnoreCase(sqlType) || "INTERGER".equalsIgnoreCase(sqlType) || "INT4".equalsIgnoreCase(sqlType))
+            return TYPE_INTEGER;
+        else if ("BIGINT".equalsIgnoreCase(sqlType) || "INT8".equalsIgnoreCase(sqlType))
+            return TYPE_BIGINT;
+        else if ("REAL".equalsIgnoreCase(sqlType))
+            return TYPE_FLOAT;
+        else if ("DOUBLE PRECISION".equalsIgnoreCase(sqlType))
+            return TYPE_DOUBLE;
+        else if ("BOOLEAN".equalsIgnoreCase(sqlType))
+            return TYPE_BOOLEAN;
+        else if ("TIMESTAMP WITH TIME ZONE".equalsIgnoreCase(sqlType)) 
+            return TYPE_TIMESTAMP;
+        else if ("DATE".equalsIgnoreCase(sqlType)) 
+            return TYPE_DATE;
+        else if ("UUID".equalsIgnoreCase(sqlType)) 
+            return TYPE_UUID;
+        else if ("MACADDR".equalsIgnoreCase(sqlType)) 
+            return TYPE_MACADDR;
+        else if ("INET".equalsIgnoreCase(sqlType)) 
+            return TYPE_INET;
+        else if ("CIDR".equalsIgnoreCase(sqlType)) 
+            return TYPE_CIDR;
+        throw new RuntimeException("The SQL type: " + sqlType + " is not supported");
     }
 
     //

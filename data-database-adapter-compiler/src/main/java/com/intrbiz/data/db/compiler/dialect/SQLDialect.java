@@ -79,6 +79,8 @@ public abstract class SQLDialect
     
     public abstract SQLType getType(Class<?> javaClass);
     
+    public abstract SQLType getType(String sqlType);
+    
     // DDL
     
     public abstract SQLScript writeCreateSchema(Schema schema);

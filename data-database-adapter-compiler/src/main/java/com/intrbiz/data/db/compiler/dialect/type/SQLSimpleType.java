@@ -35,6 +35,16 @@ public class SQLSimpleType implements SQLType
         return this.javaTypes[0];
     }
     
+    public boolean isCompatibleWith(Class<?> type)
+    {
+        for (Class<?> c : this.getJavaTypes())
+        {
+            if (type.isAssignableFrom(c))
+                return true;
+        }
+        return false;
+    }
+    
     public void addImports(Set<String> imports)
     {
     }

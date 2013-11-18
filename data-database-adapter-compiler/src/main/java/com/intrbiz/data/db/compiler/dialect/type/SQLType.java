@@ -10,6 +10,8 @@ public interface SQLType
     
     Class<?>[] getJavaTypes();
     
+    boolean isCompatibleWith(Class<?> type);
+    
     //
     
     void addImports(Set<String> imports);

@@ -242,7 +242,10 @@ public class SQLIntrospector
         if (sa != null)
         {
             String name = getColumnName(field);
-            SQLType type = dialect.getType(field.getType());
+            // if the @SQLColumn annotation defines a explicit SQL type use that in preference
+            SQLType type =  Util.isEmpty(sa.type()) ? dialect.getType(field.getType()) : dialect.getType(sa.type());
+            if (! type.isCompatibleWith(field.getType()))
+                throw new RuntimeException("The field type: " + field.getType() + " is not compatible with the SQL Type: " + type.getSQLType() + " (" + type.getDefaultJavaType().getCanonicalName() + ")");
             return new Column(sa.index(), name, type, field);
         }
         return null;
