@@ -1,15 +1,15 @@
-package com.intrbiz.queue.impl;
+package com.intrbiz.queue.pgq;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
-import com.intrbiz.queue.EventContainer;
-import com.intrbiz.queue.Producer;
 import com.intrbiz.util.pool.database.DatabasePool;
 
-public abstract class PGQ<T> extends PollingQueue<T>
+public abstract class PGQ<T> implements Runnable
 {
     protected final DatabasePool pool;
 
@@ -18,20 +18,76 @@ public abstract class PGQ<T> extends PollingQueue<T>
     protected final String queueName;
 
     protected final String consumerName;
+    
+    protected ConcurrentMap<String, PGQConsumer<T>> pGQConsumers = new ConcurrentHashMap<String, PGQConsumer<T>>();
+
+    protected boolean run = false;
+
+    protected long pollDelay;
 
     public PGQ(DatabasePool pool, String queueName, String consumerName, Class<?>[] eventTypes)
     {
-        super(5000);
+        super();
+        this.pollDelay = 5_000;
         this.pool = pool;
         this.queueName = queueName;
         this.consumerName = consumerName;
         this.eventTypes = eventTypes;
     }
 
-    @Override
-    public Producer<T> newProducer()
+    public void newConsumer(PGQConsumer<T> consumer)
     {
-        return new Producer<T>()
+        this.pGQConsumers.put(consumer.getName(), consumer);
+    }
+
+    protected void consumeEvent(EventContainer<T> event)
+    {
+        for (PGQConsumer<T> con : pGQConsumers.values())
+        {
+            con.take(event);
+        }
+    }
+
+    public void run()
+    {
+        this.run = true;
+        while (this.run)
+        {
+            if (this.consumeEvents())
+            {
+                // sleep
+                synchronized (this)
+                {
+                    try
+                    {
+                        this.wait(this.pollDelay);
+                    }
+                    catch (InterruptedException e)
+                    {
+                    }
+                }
+            }
+        }
+    }
+
+    public void shutdown()
+    {
+        this.run = false;
+        // wake up if we are sleeping
+        synchronized (this)
+        {
+            this.notifyAll();
+        }
+    }
+
+    public boolean isRunning()
+    {
+        return this.run;
+    }
+
+    public PGQProducer<T> newProducer()
+    {
+        return new PGQProducer<T>()
         {
             public void put(T event)
             {
@@ -62,7 +118,6 @@ public abstract class PGQ<T> extends PollingQueue<T>
 
     protected abstract T decodeEvent(Class<? extends T> type, String data);
 
-    @Override
     protected boolean consumeEvents()
     {
         // Connect to the DB

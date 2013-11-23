@@ -1,4 +1,4 @@
-package com.intrbiz.queue.impl;
+package com.intrbiz.queue.pgq;
 
 import java.io.IOException;
 import java.io.StringWriter;

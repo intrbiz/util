@@ -1,10 +1,10 @@
-package com.intrbiz.queue;
+package com.intrbiz.queue.pgq;
 
 import java.sql.Timestamp;
 
 public class EventContainer<T>
 {
-    private final Queue<T> queue;
+    private final PGQ<T> queue;
 
     private final Timestamp eventTime;
 
@@ -12,7 +12,7 @@ public class EventContainer<T>
 
     private final T event;
 
-    public EventContainer(Queue<T> queue, Timestamp eventTime, Class<? extends T> eventType, T event)
+    public EventContainer(PGQ<T> queue, Timestamp eventTime, Class<? extends T> eventType, T event)
     {
         super();
         this.queue = queue;
@@ -21,7 +21,7 @@ public class EventContainer<T>
         this.event = event;
     }
 
-    public Queue<T> getQueue()
+    public PGQ<T> getQueue()
     {
         return queue;
     }

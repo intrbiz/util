@@ -1,6 +1,7 @@
-package com.intrbiz.queue;
+package com.intrbiz.queue.pgq;
 
-public interface Consumer<T>
+
+public interface PGQConsumer<T>
 {
     String getName();
     
