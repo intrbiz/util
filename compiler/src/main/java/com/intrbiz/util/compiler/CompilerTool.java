@@ -3,6 +3,8 @@ package com.intrbiz.util.compiler;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -19,8 +21,7 @@ import org.apache.log4j.Logger;
 import com.intrbiz.util.compiler.model.JavaClass;
 
 /**
- * A rather poor and primitive wrapper to the JDK (6) Tools API.
- * Making it simple to compile and load a Java class at Runtime.
+ * A rather poor and primitive wrapper to the JDK (6) Tools API. Making it simple to compile and load a Java class at Runtime.
  */
 public final class CompilerTool
 {
@@ -30,15 +31,15 @@ public final class CompilerTool
     {
         return TOOL;
     }
-    
+
     private JavaCompiler compiler;
 
     private StandardJavaFileManager fileManager;
 
     private ClassLoader loader;
-    
+
     private File base;
-    
+
     private Logger logger = Logger.getLogger(CompilerTool.class);
 
     private CompilerTool()
@@ -53,29 +54,54 @@ public final class CompilerTool
             this.base = Files.createTempDirectory("intrbiz-rt-classes-" + System.currentTimeMillis() + "-").toFile();
             logger.trace("Using " + this.base + " as compilation directory");
             // set the output directory
-            this.fileManager.setLocation(StandardLocation.CLASS_OUTPUT, Arrays.asList(new File[]{ this.base }));
+            this.fileManager.setLocation(StandardLocation.CLASS_OUTPUT, Arrays.asList(new File[] { this.base }));
             // append our output directory to the compiler class path
-            List<File> classPath = new LinkedList<File>();
-            for (File file : this.fileManager.getLocation(StandardLocation.CLASS_PATH))
+            this.appendClassPath(this.base);
+            // look at our class loader
+            ClassLoader ourLoader = CompilerTool.class.getClassLoader();
+            if (ourLoader instanceof URLClassLoader)
             {
-                classPath.add(file);
+                for (URL url : ((URLClassLoader) ourLoader).getURLs())
+                {
+                    logger.trace("Adding classpath entry: " + url.getPath());
+                    this.appendClassPath(new File(url.getPath()));
+                }
             }
-            classPath.add(this.base);
-            this.fileManager.setLocation(StandardLocation.CLASS_PATH, classPath);
+            // create a class loader for our compiled code chained with the class loader which loaded us
+            this.loader = new SimpleClassLoader(ourLoader, this.fileManager);
         }
         catch (IOException e)
         {
             logger.error("Failed to setup temporary compilation directory", e);
         }
-        //
-        this.loader = new SimpleClassLoader(ClassLoader.getSystemClassLoader(), this.fileManager);
     }
-    
+
+    public void appendClassPath(File... paths)
+    {
+        try
+        {
+            List<File> classPath = new LinkedList<File>();
+            for (File file : this.fileManager.getLocation(StandardLocation.CLASS_PATH))
+            {
+                classPath.add(file);
+            }
+            for (File path : paths)
+            {
+                classPath.add(path);
+            }
+            this.fileManager.setLocation(StandardLocation.CLASS_PATH, classPath);
+        }
+        catch (IOException e)
+        {
+            logger.error("Failed to append to the class path", e);
+        }
+    }
+
     public ClassLoader getLoader()
     {
         return this.loader;
     }
-    
+
     public synchronized boolean compileClass(String className, String classContent)
     {
         if (logger.isTraceEnabled() || Boolean.getBoolean("com.intrbiz.compiler.source"))
@@ -96,18 +122,15 @@ public final class CompilerTool
             {
             }
         }
-        return this.compiler.getTask(null, this.fileManager, null, null, null, Arrays.asList(new JavaFileObject[]{ new MemoryJavaFile(className, classContent) })).call();
+        return this.compiler.getTask(null, this.fileManager, null, null, null, Arrays.asList(new JavaFileObject[] { new MemoryJavaFile(className, classContent) })).call();
     }
-    
+
     public synchronized Class<?> defineClass(String className, String classContent) throws ClassNotFoundException
     {
-        if (this.compileClass(className, classContent))
-        {
-            return this.loader.loadClass(className);
-        }
+        if (this.compileClass(className, classContent)) { return this.loader.loadClass(className); }
         return null;
     }
-    
+
     public synchronized Class<?> defineClass(JavaClass jCls) throws ClassNotFoundException
     {
         return this.defineClass(jCls.getCanonicalName(), jCls.toJava(""));
