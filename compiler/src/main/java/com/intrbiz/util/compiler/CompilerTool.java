@@ -3,9 +3,12 @@ package com.intrbiz.util.compiler;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -63,8 +66,16 @@ public final class CompilerTool
             {
                 for (URL url : ((URLClassLoader) ourLoader).getURLs())
                 {
-                    logger.trace("Adding classpath entry: " + url.getPath());
-                    this.appendClassPath(new File(url.getPath()));
+                    try
+                    {
+                        Path path = Paths.get(url.toURI());
+                        logger.trace("Adding classpath entry: " + path.toFile().getAbsolutePath());
+                        this.appendClassPath(path.toFile());
+                    }
+                    catch (URISyntaxException e)
+                    {
+                        logger.error("Failed to convert URL to file");
+                    }
                 }
             }
             // create a class loader for our compiled code chained with the class loader which loaded us
