@@ -57,10 +57,12 @@
 		<module>compiler</module>
 		<module>database-pool</module>
 		<module>queue</module>
-    <module>data-manager</module>
-    <module>crypto</module>
-    <module>data-database-adapter-compiler</module>
-    <module>data-annotations</module>
+		<module>data-manager</module>
+		<module>crypto</module>
+		<module>data-database-adapter-compiler</module>
+		<module>data-annotations</module>
+		<module>packaging</module>
+    <module>bootstrap</module>
   </modules>
 	<dependencyManagement>
 		<dependencies>
