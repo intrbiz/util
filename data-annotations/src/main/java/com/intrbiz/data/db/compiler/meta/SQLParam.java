@@ -10,4 +10,5 @@ import java.lang.annotation.Target;
 public @interface SQLParam {
     String value();
     boolean optional() default false;
+    boolean virtual() default false;
 }

@@ -9,6 +9,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface SQLTable
 {
+    Class<?> schema();
     String  name();
     SQLVersion since();
 }
