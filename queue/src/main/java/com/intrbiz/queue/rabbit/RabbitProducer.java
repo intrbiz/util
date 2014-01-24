@@ -6,13 +6,14 @@ import com.intrbiz.queue.Producer;
 import com.intrbiz.queue.QueueBrokerPool;
 import com.intrbiz.queue.QueueException;
 import com.intrbiz.queue.RoutedProducer;
+import com.intrbiz.queue.name.RoutingKey;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ShutdownListener;
 import com.rabbitmq.client.ShutdownSignalException;
 
-public abstract class RabbitProducer<T> implements Producer<T>, RoutedProducer<T>
+public abstract class RabbitProducer<T, K extends RoutingKey> implements Producer<T>, RoutedProducer<T, K>
 {
     protected final QueueBrokerPool<Connection> broker;
 
@@ -72,12 +73,12 @@ public abstract class RabbitProducer<T> implements Producer<T>, RoutedProducer<T
         return this.exchangeType;
     }
 
-    protected void publish(String key, BasicProperties props, byte[] event)
+    protected void publish(K key, BasicProperties props, byte[] event)
     {
         if (this.closed) throw new QueueException("This producer is closed, cannot publish");
         try
         {
-            this.channel.basicPublish(this.exchange, key, props, event);
+            this.channel.basicPublish(this.exchange, key == null ? null : key.toString(), props, event);
         }
         catch (IOException e)
         {

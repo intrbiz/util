@@ -2,6 +2,8 @@ package com.intrbiz.queue.rabbit;
 
 import java.io.IOException;
 
+import org.apache.log4j.Logger;
+
 import com.intrbiz.queue.Consumer;
 import com.intrbiz.queue.DeliveryHandler;
 import com.intrbiz.queue.QueueBrokerPool;
@@ -16,6 +18,8 @@ import com.rabbitmq.client.ShutdownSignalException;
 
 public abstract class RabbitConsumer<T> implements Consumer<T>
 {
+    private Logger logger = Logger.getLogger(RabbitConsumer.class);
+    
     protected final QueueBrokerPool<Connection> broker;
 
     protected final DeliveryHandler<T> handler;
@@ -75,7 +79,14 @@ public abstract class RabbitConsumer<T> implements Consumer<T>
                 @Override
                 public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException
                 {
-                    RabbitConsumer.this.handleDelivery(consumerTag, envelope, properties, body);
+                    try
+                    {
+                        RabbitConsumer.this.handleDelivery(consumerTag, envelope, properties, body);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.error("Unhandled error handling delivery", e);
+                    }
                 }
             });
         }
