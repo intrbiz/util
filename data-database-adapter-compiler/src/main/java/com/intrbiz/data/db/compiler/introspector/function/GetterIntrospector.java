@@ -3,7 +3,6 @@ package com.intrbiz.data.db.compiler.introspector.function;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
-import com.intrbiz.data.db.DatabaseAdapter;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.type.SQLCompositeType;
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
@@ -26,7 +25,7 @@ import com.intrbiz.data.db.compiler.model.function.GetterInfo;
 public class GetterIntrospector implements SQLFunctionIntrospector
 {
     @Override
-    public Function buildFunction(SQLIntrospector introspector, SQLDialect dialect, Method method, Annotation sqlFunction, Class<? extends DatabaseAdapter> cls, Schema schema)
+    public Function buildFunction(SQLIntrospector introspector, SQLDialect dialect, Method method, Annotation sqlFunction, Class<?> cls, Schema schema)
     {
         SQLGetter getter = (SQLGetter) sqlFunction;
         SQLIntrospector.assertSQLTable(getter.table());
@@ -41,8 +40,8 @@ public class GetterIntrospector implements SQLFunctionIntrospector
         if ((! function.isReturnsList()) && getter.table() != method.getReturnType()) throw new RuntimeException("The method " + method + " must return " + getter.table().getCanonicalName() + ".");
         // the table type
         Class<?> tableCls = getter.table();
-        Type type = introspector.buildType(dialect, tableCls, schema);
-        Table table = introspector.buildTable(dialect, tableCls, schema);
+        Type type = introspector.buildType(dialect, tableCls);
+        Table table = introspector.buildTable(dialect, tableCls);
         function.setReturnType(new SQLCompositeType(type, tableCls));
         info.setTable(table);
         // arguments
@@ -61,7 +60,7 @@ public class GetterIntrospector implements SQLFunctionIntrospector
                 SQLType sqlType = dialect.getType(argType);
                 // find the column
                 Column col = table.findColumn(param.value());
-                if (col == null) throw new RuntimeException("The parameter " + param.value() + " of method " + method + " has no corresponding column in table " + table.getName() + ".");
+                if (col == null && (! param.virtual())) throw new RuntimeException("The parameter " + param.value() + " of method " + method + " has no corresponding column in table " + table.getName() + ".");
                 // add the argument
                 Argument arg = new Argument(idx++, param.value(), sqlType, argType, col);
                 arg.setOptional(param.optional());

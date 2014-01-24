@@ -3,7 +3,6 @@ package com.intrbiz.data.db.compiler.introspector.function;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
-import com.intrbiz.data.db.DatabaseAdapter;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.introspector.SQLIntrospector;
 import com.intrbiz.data.db.compiler.meta.SQLSetter;
@@ -17,7 +16,7 @@ import com.intrbiz.data.db.compiler.model.function.SetterInfo;
 public class SetterIntrospector implements SQLFunctionIntrospector
 {
     @Override
-    public Function buildFunction(SQLIntrospector introspector, SQLDialect dialect, Method method, Annotation sqlFunction, Class<? extends DatabaseAdapter> cls, Schema schema)
+    public Function buildFunction(SQLIntrospector introspector, SQLDialect dialect, Method method, Annotation sqlFunction, Class<?> cls, Schema schema)
     {
         SQLSetter setter = (SQLSetter) sqlFunction;
         SQLIntrospector.assertSQLTable(setter.table());
@@ -33,7 +32,7 @@ public class SetterIntrospector implements SQLFunctionIntrospector
         // check the argument type
         if (setter.table() != method.getParameterTypes()[0]) throw new RuntimeException("The method " + method + " must have a single parameter of type " + setter.table().getCanonicalName() + ".");
         // the table type
-        Table table = introspector.buildTable(dialect, setter.table(), schema);
+        Table table = introspector.buildTable(dialect, setter.table());
         info.setTable(table);
         // create arguments for every column in the table
         int idx = 0;

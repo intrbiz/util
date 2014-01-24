@@ -5,6 +5,8 @@ import java.sql.Timestamp;
 import java.util.Set;
 import java.util.UUID;
 
+import org.apache.log4j.Logger;
+
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
 import com.intrbiz.data.db.compiler.dialect.pgsql.function.GetterGenerator;
@@ -30,6 +32,8 @@ import com.intrbiz.data.db.util.DBUtil;
 
 public class PGSQLDialect extends SQLDialect
 {
+    private Logger logger = Logger.getLogger(PGSQLDialect.class);
+    
     private static final SQLType TYPE_TEXT = new SQLSimpleType("TEXT", "String", String.class);
 
     private static final SQLType TYPE_INTEGER = new SQLSimpleType("INTEGER", "Int", int.class, Integer.class);
@@ -166,24 +170,32 @@ public class PGSQLDialect extends SQLDialect
             to.write(" (").writeColumnNameList(table.getPrimaryKey().getColumns()).write(")");
             ns = true;
         }
-        // constraints
+        to.writeln();
+        to.writeln(")");
+        //
+        s.command().write("ALTER TABLE ").writeid(table.getSchema(), table.getName()).write(" OWNER TO ").write(this.getOwner());
+        //
+        return s;
+    }
+    
+    @Override
+    public SQLScript writeCreateTableForeignKeys(Table table)
+    {
+        SQLScript s = new SQLScript();
+        // foreign keys
         for (ForeignKey key : table.getForeignKeys())
         {
-            if (ns) to.writeln(",");
-            to.write("    CONSTRAINT ").writeid(key.getName()).write(" FOREIGN KEY");
+            SQLCommand to = s.command();
+            //
+            to.write("ALTER TABLE ").writeid(table.getSchema(), table.getName());
+            to.write(" ADD CONSTRAINT ").writeid(key.getName()).write(" FOREIGN KEY");
             to.write(" (").writeColumnNameList(key.getColumns()).write(")");
             to.write(" REFERENCES ").writeid(key.getReferences().getSchema(), key.getReferences().getName());
             to.write(" (").writeColumnNameList(key.getOn()).write(")");
             to.write(" ON DELETE ").write(this.writeForeignKeyAction(key.getOnDelete()));
             to.write(" ON UPDATE ").write(this.writeForeignKeyAction(key.getOnUpdate()));
             to.write(" ").write(this.writeForeignKeyDeferable(key.getDeferable()));
-            ns = true;
         }
-        to.writeln();
-        to.writeln(")");
-        //
-        s.command().write("ALTER TABLE ").writeid(table.getSchema(), table.getName()).write(" OWNER TO ").write(this.getOwner());
-        //
         return s;
     }
 
@@ -235,6 +247,8 @@ public class PGSQLDialect extends SQLDialect
     @Override
     public SQLScript writeCreateFunction(Function function)
     {
+        logger.trace("Creating functions " + function.getSchema().getName() + "." + function.getName());
+        //
         SQLScript s = new SQLScript();
         SQLCommand to = s.command();
         to.write("CREATE OR REPLACE FUNCTION ").writeid(function.getSchema(), function.getName()).write("(");

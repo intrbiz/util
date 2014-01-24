@@ -3,7 +3,6 @@ package com.intrbiz.data.db.compiler.introspector.function;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
-import com.intrbiz.data.db.DatabaseAdapter;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
 import com.intrbiz.data.db.compiler.introspector.SQLIntrospector;
@@ -19,7 +18,7 @@ import com.intrbiz.data.db.compiler.model.function.RemoveInfo;
 public class RemoveIntrospector implements SQLFunctionIntrospector
 {
     @Override
-    public Function buildFunction(SQLIntrospector introspector, SQLDialect dialect, Method method, Annotation sqlFunction, Class<? extends DatabaseAdapter> cls, Schema schema)
+    public Function buildFunction(SQLIntrospector introspector, SQLDialect dialect, Method method, Annotation sqlFunction, Class<?> cls, Schema schema)
     {
         SQLRemove remove = (SQLRemove) sqlFunction;
         SQLIntrospector.assertSQLTable(remove.table());
@@ -31,7 +30,7 @@ public class RemoveIntrospector implements SQLFunctionIntrospector
         if (void.class != method.getReturnType()) throw new RuntimeException("The method " + method + " must return void.");
         // table type
         Class<?> tableCls = remove.table();
-        Table table = introspector.buildTable(dialect, tableCls, schema);
+        Table table = introspector.buildTable(dialect, tableCls);
         info.setTable(table);
         // the arguments are SQLParams to delete by
         Class<?>[] argTypes = method.getParameterTypes();

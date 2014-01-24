@@ -170,10 +170,15 @@ public class DatabaseAdapterCompiler
         // info functions
         set.add(this.dialect.writeCreateSchemaNameFunction(schema));
         set.add(this.dialect.writeCreateSchemaVersionFunction(schema));
-        //
+        // create all the tables
         for (Table table : schema.getTables())
         {
             set.add(this.dialect.writeCreateTable(table));
+        }
+        // add all foreign keys
+        for (Table table : schema.getTables())
+        {
+            set.add(this.dialect.writeCreateTableForeignKeys(table));
         }
         //
         for (Type type : schema.getTypes())
@@ -211,6 +216,14 @@ public class DatabaseAdapterCompiler
             if (table.getSince().isAfter(installedVersion))
             {
                 set.add(this.dialect.writeCreateTable(table));
+            }
+        }
+        // install foreign keys for any new tables
+        for (Table table : schema.getTables())
+        {
+            if (table.getSince().isAfter(installedVersion))
+            {
+                set.add(this.dialect.writeCreateTableForeignKeys(table));
             }
         }
         // install any new types

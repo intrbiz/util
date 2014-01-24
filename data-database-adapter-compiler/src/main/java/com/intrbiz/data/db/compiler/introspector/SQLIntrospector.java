@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.intrbiz.Util;
-import com.intrbiz.data.db.DatabaseAdapter;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
 import com.intrbiz.data.db.compiler.introspector.function.GetterIntrospector;
@@ -48,7 +47,7 @@ public class SQLIntrospector
 
     // caches
     
-    private Map<Class<? extends DatabaseAdapter>, Schema> schemaCache = new IdentityHashMap<Class<? extends DatabaseAdapter>, Schema>();
+    private Map<Class<?>, Schema> schemaCache = new IdentityHashMap<Class<?>, Schema>();
 
     private Map<Class<?>, Table> tableCache = new IdentityHashMap<Class<?>, Table>();
 
@@ -75,7 +74,7 @@ public class SQLIntrospector
 
     //
 
-    public Schema buildSchema(SQLDialect dialect, Class<? extends DatabaseAdapter> cls)
+    public Schema buildSchema(SQLDialect dialect, Class<?> cls)
     {
         Schema schema = this.schemaCache.get(cls);
         if (schema == null)
@@ -95,10 +94,10 @@ public class SQLIntrospector
             for (Class<?> tCls : sqlSchema.tables())
             {
                 // build the table
-                Table table = this.buildTable(dialect, tCls, schema);
+                Table table = this.buildTable(dialect, tCls);
                 schema.addTable(table);
                 // build the type from the table
-                Type type = this.buildType(dialect, tCls, schema);
+                Type type = this.buildType(dialect, tCls);
                 schema.addType(type);
                 // build the patches from the table
                 schema.addPatches(this.buildPatches(dialect, tCls));
@@ -148,7 +147,7 @@ public class SQLIntrospector
         return patches;
     }
 
-    protected void buildFunctions(SQLDialect dialect, Class<? extends DatabaseAdapter> cls, Schema schema)
+    protected void buildFunctions(SQLDialect dialect, Class<?> cls, Schema schema)
     {
         for (Method method : cls.getMethods())
         {
@@ -180,12 +179,12 @@ public class SQLIntrospector
         return null;
     }
 
-    public Type buildType(SQLDialect dialect, Class<?> cls, /* Nullable */Schema schema)
+    public Type buildType(SQLDialect dialect, Class<?> cls)
     {
         Type type = this.typeCache.get(cls);
         if (type == null)
         {
-            Table table = this.buildTable(dialect, cls, schema);
+            Table table = this.buildTable(dialect, cls);
             type = new Type("t_" + table.getName());
             this.typeCache.put(cls, type);
             type.setColumns(table.getColumns());
@@ -194,19 +193,21 @@ public class SQLIntrospector
         return type;
     }
 
-    public Table buildTable(SQLDialect dialect, Class<?> cls, /* Nullable */Schema schema)
+    public Table buildTable(SQLDialect dialect, Class<?> cls)
     {
         Table table = this.tableCache.get(cls);
         if (table == null)
         {
+            SQLTable sqlTable = cls.getAnnotation(SQLTable.class);
+            // get the schema
+            Schema schema = this.buildSchema(dialect, sqlTable.schema());
+            // the table
             table = new Table(schema, getTableName(cls), cls);
             this.tableCache.put(cls, table);
-            //
-            SQLTable sqlTable = cls.getAnnotation(SQLTable.class);
             // since
             table.setSince(new Version(sqlTable.since()));
             // columns
-            this.buildTable(dialect, cls, table, schema);
+            this.buildTable(dialect, cls, table);
             // primary key
             table.setPrimaryKey(new PrimaryKey(table.getName() + "_pk"));
             this.buildPrimaryKey(dialect, cls, table);
@@ -216,11 +217,11 @@ public class SQLIntrospector
         return table;
     }
 
-    protected void buildTable(SQLDialect dialect, Class<?> cls, Table model, /* Nullable */Schema schema)
+    protected void buildTable(SQLDialect dialect, Class<?> cls, Table model)
     {
         if (cls == null) return;
         //
-        buildTable(dialect, cls.getSuperclass(), model, schema);
+        buildTable(dialect, cls.getSuperclass(), model);
         //
         List<Column> attrs = new LinkedList<Column>();
         for (Field field : cls.getDeclaredFields())
@@ -298,7 +299,7 @@ public class SQLIntrospector
                     if (col != null) key.addColumn(col);
                 }
                 // references
-                key.setReferences(this.buildTable(dialect, fkey.references(), null));
+                key.setReferences(this.buildTable(dialect, fkey.references()));
                 // on
                 for (String on : fkey.on())
                 {

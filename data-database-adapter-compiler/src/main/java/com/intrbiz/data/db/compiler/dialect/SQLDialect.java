@@ -87,6 +87,8 @@ public abstract class SQLDialect
     
     public abstract SQLScript writeCreateTable(Table table);
     
+    public abstract SQLScript writeCreateTableForeignKeys(Table table);
+    
     public abstract SQLScript writeCreateType(Type type);
     
     public abstract SQLScript writeCreateFunction(Function function);

@@ -17,7 +17,7 @@ public class Schema
 
     private List<Function> functions = new LinkedList<Function>();
 
-    private Class<? extends DatabaseAdapter> definition;
+    private Class<?> definition;
 
     private List<Patch> patches = new LinkedList<Patch>();
 
@@ -32,7 +32,7 @@ public class Schema
         this.name = name;
     }
 
-    public Schema(String name, Class<? extends DatabaseAdapter> definition)
+    public Schema(String name, Class<?> definition)
     {
         super();
         this.name = name;
@@ -107,7 +107,7 @@ public class Schema
         function.setSchema(this);
     }
 
-    public Class<? extends DatabaseAdapter> getDefinition()
+    public Class<?> getDefinition()
     {
         return definition;
     }
