@@ -1,9 +1,11 @@
 package com.intrbiz.queue;
 
+import com.intrbiz.queue.name.Exchange;
+
 
 public interface Producer<T> extends AutoCloseable
 {
-    String exchange();
+    Exchange exchange();
     
     void publish(T event);
     

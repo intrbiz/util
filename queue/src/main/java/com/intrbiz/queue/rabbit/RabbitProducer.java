@@ -4,73 +4,42 @@ import java.io.IOException;
 
 import com.intrbiz.queue.Producer;
 import com.intrbiz.queue.QueueBrokerPool;
+import com.intrbiz.queue.QueueEventTranscoder;
 import com.intrbiz.queue.QueueException;
 import com.intrbiz.queue.RoutedProducer;
+import com.intrbiz.queue.name.Exchange;
 import com.intrbiz.queue.name.RoutingKey;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ShutdownListener;
-import com.rabbitmq.client.ShutdownSignalException;
 
-public abstract class RabbitProducer<T, K extends RoutingKey> implements Producer<T>, RoutedProducer<T, K>
+public class RabbitProducer<T, K extends RoutingKey> extends RabbitBase<T> implements Producer<T>, RoutedProducer<T, K>
 {
-    protected final QueueBrokerPool<Connection> broker;
+    protected final Exchange exchange;
+    
+    protected final K defaultKey;
 
-    protected final String exchange;
-
-    protected final String exchangeType;
-
-    protected volatile boolean closed = false;
-
-    protected Connection connection;
-
-    protected Channel channel;
-
-    public RabbitProducer(QueueBrokerPool<Connection> broker, String exchange, String exchangeType)
+    public RabbitProducer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange, K defaultKey)
     {
-        super();
-        this.broker = broker;
+        super(broker, transcoder);
         this.exchange = exchange;
-        this.exchangeType = exchangeType;
+        this.defaultKey = defaultKey;
         this.init();
     }
 
-    public RabbitProducer(QueueBrokerPool<Connection> broker, String exchange)
+    protected void setup() throws IOException
     {
-        this(broker, exchange, "topic");
-    }
-
-    protected void init()
-    {
-        if (this.closed) return;
-        try
-        {
-            this.connection = broker.connect();
-            this.channel = this.connection.createChannel();
-            this.connection.addShutdownListener(new Reinit());
-            this.decareExchange();
-        }
-        catch (IOException e)
-        {
-            throw new QueueException("Cannot initialise connection", e);
-        }
-    }
-
-    protected void decareExchange() throws IOException
-    {
-        this.channel.exchangeDeclare(this.exchange, this.exchangeType, true);
+        this.channel.exchangeDeclare(this.exchange.getName(), this.exchange.getType(), this.exchange.isPersistent());
     }
 
     @Override
-    public final String exchange()
+    public final Exchange exchange()
     {
         return this.exchange;
     }
-
-    public final String exchangeType()
+    
+    public final K defaultKey()
     {
-        return this.exchangeType;
+        return this.defaultKey;
     }
 
     protected void publish(K key, BasicProperties props, byte[] event)
@@ -78,7 +47,7 @@ public abstract class RabbitProducer<T, K extends RoutingKey> implements Produce
         if (this.closed) throw new QueueException("This producer is closed, cannot publish");
         try
         {
-            this.channel.basicPublish(this.exchange, key == null ? null : key.toString(), props, event);
+            this.channel.basicPublish(this.exchange.getName(), key == null ? null : key.toString(), props, event);
         }
         catch (IOException e)
         {
@@ -87,53 +56,22 @@ public abstract class RabbitProducer<T, K extends RoutingKey> implements Produce
     }
 
     @Override
-    public final void close()
+    public void publish(K key, T event)
     {
-        if (!this.closed)
-        {
-            this.closed = true;
-            try
-            {
-                channel.close();
-            }
-            catch (Exception e)
-            {
-            }
-            finally
-            {
-                try
-                {
-                    connection.close();
-                }
-                catch (Exception e)
-                {
-                }
-            }
-            this.channel = null;
-            this.connection = null;
-        }
+        this.publish(
+                key, 
+                new BasicProperties("application/json", null, null, 2, /* Persistent */ null, null, null, null, null, null, null, null, null, null), 
+                this.transcoder.encodeAsBytes(event)
+        );
     }
 
-    private class Reinit implements ShutdownListener
+    @Override
+    public void publish(T event)
     {
-        @Override
-        public void shutdownCompleted(ShutdownSignalException cause)
-        {
-            while (true)
-            {
-                try
-                {
-                    Thread.sleep(5000);
-                    RabbitProducer.this.init();
-                    break;
-                }
-                catch (QueueException e)
-                {
-                }
-                catch (InterruptedException e)
-                {
-                }
-            }
-        }
+        this.publish(
+                this.defaultKey,
+                new BasicProperties("application/json", null, null, 2, /* Persistent */ null, null, null, null, null, null, null, null, null, null), 
+                this.transcoder.encodeAsBytes(event)
+        );
     }
 }

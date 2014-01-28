@@ -7,74 +7,75 @@ import org.apache.log4j.Logger;
 import com.intrbiz.queue.Consumer;
 import com.intrbiz.queue.DeliveryHandler;
 import com.intrbiz.queue.QueueBrokerPool;
+import com.intrbiz.queue.QueueEventTranscoder;
 import com.intrbiz.queue.QueueException;
+import com.intrbiz.queue.name.Exchange;
+import com.intrbiz.queue.name.Queue;
+import com.intrbiz.queue.name.RoutingKey;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
-import com.rabbitmq.client.ShutdownListener;
-import com.rabbitmq.client.ShutdownSignalException;
 
-public abstract class RabbitConsumer<T> implements Consumer<T>
+public class RabbitConsumer<T> extends RabbitBase<T> implements Consumer<T>
 {
     private Logger logger = Logger.getLogger(RabbitConsumer.class);
-    
-    protected final QueueBrokerPool<Connection> broker;
 
     protected final DeliveryHandler<T> handler;
 
-    protected String queueName;
+    protected final Exchange exchange;
+
+    protected final Queue queueSpec;
+
+    protected final RoutingKey[] bindings;
+
+    protected Queue queue;
 
     protected String consumerName;
 
-    protected volatile boolean closed;
-
-    protected Connection connection;
-
-    protected Channel channel;
-
-    public RabbitConsumer(QueueBrokerPool<Connection> broker, DeliveryHandler<T> handler)
+    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Queue queue, Exchange exchange, RoutingKey... bindings)
     {
-        super();
-        this.broker = broker;
+        super(broker, transcoder);
         this.handler = handler;
+        this.queueSpec = queue;
+        this.exchange = exchange;
+        this.bindings = bindings;
         this.init();
     }
 
-    protected void init()
+    protected void setup() throws IOException
     {
-        if (this.closed) return;
+        // declare the queue
+        if (this.queueSpec == null)
+        {
+            // declare a temporary queue
+            this.queue = new Queue(this.channel.queueDeclare().getQueue(), false);
+        }
+        else
+        {
+            // use the name given
+            this.channel.queueDeclare(this.queueSpec.getName(), this.queueSpec.isPersistent(), false, !this.queueSpec.isPersistent(), null);
+            this.queue = this.queueSpec;
+        }
+        // bind the queue
+        // declare the exchange
+        this.channel.exchangeDeclare(this.exchange.getName(), this.exchange.getType(), this.exchange.isPersistent());
+        // bind our queue to the exchange with the given routing keys
+        if (this.bindings != null && this.bindings.length > 0)
+        {
+            for (RoutingKey binding : this.bindings)
+            {
+                this.channel.queueBind(this.queue.getName(), this.exchange.getName(), binding.toString());
+            }
+        }
+        else
+        {
+            this.channel.queueBind(this.queue.getName(), this.exchange.getName(), this.queue.toKey().toString());
+        }
+        // consume
         try
         {
-            // initialise the connection and channel
-            this.connection = broker.connect();
-            this.channel = this.connection.createChannel();
-            // we need to reinit should the connection fail
-            this.connection.addShutdownListener(new Reinit());
-            // declare the queue
-            this.declareQueue();
-            // bind the queue
-            this.bindQueue();
-            // consume
-            this.declareConsumer();
-        }
-        catch (IOException e)
-        {
-            throw new QueueException("Cannot initialise connection", e);
-        }
-    }
-
-    protected void declareQueue() throws IOException
-    {
-        this.queueName = this.channel.queueDeclare().getQueue();
-    }
-
-    protected void declareConsumer()
-    {
-        try
-        {
-            this.channel.basicConsume(queueName, true, new DefaultConsumer(this.channel)
+            this.consumerName = this.channel.basicConsume(this.queue.getName(), false, new DefaultConsumer(this.channel)
             {
                 @Override
                 public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException
@@ -96,9 +97,15 @@ public abstract class RabbitConsumer<T> implements Consumer<T>
         }
     }
 
-    protected abstract void bindQueue() throws IOException;
-
-    protected abstract void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException;
+    protected void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException
+    {
+        // decode the event
+        T event = this.transcoder.decodeFromBytes(body);
+        // handle the event
+        this.handler.handleDevliery(event);
+        // ack the event
+        this.channel.basicAck(envelope.getDeliveryTag(), false);
+    }
 
     @Override
     public String name()
@@ -107,65 +114,14 @@ public abstract class RabbitConsumer<T> implements Consumer<T>
     }
 
     @Override
-    public String queueName()
+    public Queue queue()
     {
-        return this.queueName;
+        return this.queue;
     }
 
     @Override
     public DeliveryHandler<T> handler()
     {
         return this.handler;
-    }
-
-    @Override
-    public void close()
-    {
-        if (!this.closed)
-        {
-            this.closed = true;
-            try
-            {
-                channel.close();
-            }
-            catch (Exception e)
-            {
-            }
-            finally
-            {
-                try
-                {
-                    connection.close();
-                }
-                catch (Exception e)
-                {
-                }
-            }
-            this.channel = null;
-            this.connection = null;
-        }
-    }
-
-    private class Reinit implements ShutdownListener
-    {
-        @Override
-        public void shutdownCompleted(ShutdownSignalException cause)
-        {
-            while (true)
-            {
-                try
-                {
-                    Thread.sleep(5000);
-                    RabbitConsumer.this.init();
-                    break;
-                }
-                catch (QueueException e)
-                {
-                }
-                catch (InterruptedException e)
-                {
-                }
-            }
-        }
     }
 }
