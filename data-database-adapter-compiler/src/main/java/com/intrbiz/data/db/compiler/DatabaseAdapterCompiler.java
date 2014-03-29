@@ -193,7 +193,7 @@ public class DatabaseAdapterCompiler
         // add any install patches for this version
         for (Patch patch : schema.getPatches())
         {
-            if (ScriptType.INSTALL == patch.getType() && patch.getVersion().equals(schema.getVersion()))
+            if (ScriptType.INSTALL == patch.getType() && patch.getVersion().isBeforeOrEqual(schema.getVersion()))
             {
                 set.add(patch.getScript());
             }
