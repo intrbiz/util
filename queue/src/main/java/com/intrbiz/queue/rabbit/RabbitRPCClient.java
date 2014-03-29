@@ -32,6 +32,8 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
     
     private final Exchange exchange;
     
+    protected final K defaultKey;
+    
     private Queue replyQueue;
     
     private ConcurrentMap<String, PendingRequest> pendingRequests = new ConcurrentHashMap<String, PendingRequest>();
@@ -40,10 +42,11 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
     
     private Timer vacuumCleaner;
     
-    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange)
+    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange, K defaultKey)
     {
         super(broker, transcoder);
         this.exchange = exchange;
+        this.defaultKey = defaultKey;
         this.init();
         this.vacuumCleaner = new Timer(true);
         this.vacuumCleaner.schedule(new TimerTask()
@@ -55,6 +58,16 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
             }
             
         }, this.timeout, this.timeout);
+    }
+    
+    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange)
+    {
+        this(broker, transcoder, exchange, null);
+    }
+    
+    public final K defaultKey()
+    {
+        return this.defaultKey;
     }
     
     protected void vacuum()
@@ -123,7 +136,7 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
     @Override
     public Future<T> publish(T event)
     {
-        return this.publish(null, event);
+        return this.publish(this.defaultKey, event);
     }
     
     @Override

@@ -25,6 +25,11 @@ public class RabbitProducer<T, K extends RoutingKey> extends RabbitBase<T> imple
         this.defaultKey = defaultKey;
         this.init();
     }
+    
+    public RabbitProducer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange)
+    {
+        this(broker, transcoder, exchange, null);
+    }
 
     protected void setup() throws IOException
     {
@@ -68,6 +73,7 @@ public class RabbitProducer<T, K extends RoutingKey> extends RabbitBase<T> imple
     @Override
     public void publish(T event)
     {
+        if (this.defaultKey == null) throw new QueueException("No default key is given, cannot publish, did you mean to use: publish(K key, T event)?");
         this.publish(
                 this.defaultKey,
                 new BasicProperties("application/json", null, null, 2, /* Persistent */ null, null, null, null, null, null, null, null, null, null), 

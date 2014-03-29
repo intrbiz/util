@@ -42,6 +42,11 @@ public class RabbitConsumer<T> extends RabbitBase<T> implements Consumer<T>
         this.bindings = bindings;
         this.init();
     }
+    
+    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Exchange exchange, RoutingKey... bindings)
+    {
+        this(broker, transcoder, handler, null, exchange, bindings);
+    }
 
     protected void setup() throws IOException
     {
