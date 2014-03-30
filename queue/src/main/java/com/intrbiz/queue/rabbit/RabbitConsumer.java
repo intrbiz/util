@@ -1,6 +1,9 @@
 package com.intrbiz.queue.rabbit;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -17,7 +20,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 
-public class RabbitConsumer<T> extends RabbitBase<T> implements Consumer<T>
+public class RabbitConsumer<T, K extends RoutingKey> extends RabbitBase<T> implements Consumer<T, K>
 {
     private Logger logger = Logger.getLogger(RabbitConsumer.class);
 
@@ -27,23 +30,31 @@ public class RabbitConsumer<T> extends RabbitBase<T> implements Consumer<T>
 
     protected final Queue queueSpec;
 
-    protected final RoutingKey[] bindings;
+    protected final Set<K> bindings = new HashSet<K>();
 
     protected Queue queue;
 
     protected String consumerName;
 
-    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Queue queue, Exchange exchange, RoutingKey... bindings)
+    @SafeVarargs
+    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Queue queue, Exchange exchange, K... bindings)
     {
         super(broker, transcoder);
         this.handler = handler;
         this.queueSpec = queue;
         this.exchange = exchange;
-        this.bindings = bindings;
+        if (bindings != null)
+        {
+            for (K binding : bindings)
+            {
+                this.bindings.add(binding);
+            }
+        }
         this.init();
     }
-    
-    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Exchange exchange, RoutingKey... bindings)
+
+    @SafeVarargs
+    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Exchange exchange, K... bindings)
     {
         this(broker, transcoder, handler, null, exchange, bindings);
     }
@@ -66,9 +77,9 @@ public class RabbitConsumer<T> extends RabbitBase<T> implements Consumer<T>
         // declare the exchange
         this.channel.exchangeDeclare(this.exchange.getName(), this.exchange.getType(), this.exchange.isPersistent());
         // bind our queue to the exchange with the given routing keys
-        if (this.bindings != null && this.bindings.length > 0)
+        if (this.bindings.size() > 0)
         {
-            for (RoutingKey binding : this.bindings)
+            for (K binding : this.bindings)
             {
                 this.channel.queueBind(this.queue.getName(), this.exchange.getName(), binding.toString());
             }
@@ -122,6 +133,30 @@ public class RabbitConsumer<T> extends RabbitBase<T> implements Consumer<T>
     public Queue queue()
     {
         return this.queue;
+    }
+
+    @Override
+    public Set<K> bindings()
+    {
+        return Collections.unmodifiableSet(this.bindings);
+    }
+
+    @Override
+    public void addBinding(K key)
+    {
+        this.bindings.add(key);
+        // bind
+        try
+        {
+            if (this.channel != null && this.channel.isOpen())
+            {
+                this.channel.queueBind(this.queue.getName(), this.exchange.getName(), key.toString());
+            }
+        }
+        catch (IOException e)
+        {
+            logger.error("Failed to immediately update queue bindings", e);
+        }
     }
 
     @Override

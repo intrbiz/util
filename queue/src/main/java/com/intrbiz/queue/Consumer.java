@@ -1,12 +1,19 @@
 package com.intrbiz.queue;
 
-import com.intrbiz.queue.name.Queue;
+import java.util.Set;
 
-public interface Consumer<T> extends AutoCloseable
+import com.intrbiz.queue.name.Queue;
+import com.intrbiz.queue.name.RoutingKey;
+
+public interface Consumer<T, K extends RoutingKey> extends AutoCloseable
 {
     String name();
     
     Queue queue();
+    
+    Set<K> bindings();
+    
+    void addBinding(K key);
     
     DeliveryHandler<T> handler();
     
