@@ -4,6 +4,12 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.intrbiz.queue.QueueBrokerPool;
 import com.intrbiz.queue.QueueException;
@@ -18,11 +24,23 @@ public class RabbitPool implements QueueBrokerPool<Channel>
     private ConnectionFactory factory;
 
     private volatile Connection currentConnection;
+    
+    private ExecutorService executor;
 
     public RabbitPool(String uri)
     {
         try
         {
+            this.executor = new ThreadPoolExecutor(Runtime.getRuntime().availableProcessors(), Integer.MAX_VALUE, 6L, TimeUnit.MINUTES, new SynchronousQueue<Runnable>(), new ThreadFactory()
+            {
+                private AtomicInteger count = new AtomicInteger();
+                @Override
+                public Thread newThread(Runnable r)
+                {
+                    return new Thread(r, "Rabbit-Pool-Worker-" + count.incrementAndGet());
+                }
+            });
+            //
             this.factory = new ConnectionFactory();
             this.factory.setUri(uri);
         }
@@ -50,7 +68,7 @@ public class RabbitPool implements QueueBrokerPool<Channel>
             {
                 try
                 {
-                    this.currentConnection = this.factory.newConnection();
+                    this.currentConnection = this.factory.newConnection(this.executor);
                     this.currentConnection.addShutdownListener(new ShutdownListener()
                     {
                         @Override
