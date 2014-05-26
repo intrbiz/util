@@ -373,7 +373,6 @@ public class DatabaseAdapterCompiler
         .append("if (adap == null) {\r\n")
         .append("  adap = new " + impl.getSimpleName() + "(connection) {\r\n")
         .append("    protected void beforeClose() {\r\n")
-        .append("      System.out.println(\"Uncaching database adapter.\");\r\n")
         .append("      localAdapter.set(null);\r\n")
         .append("      super.beforeClose();\r\n")
         .append("    }")
