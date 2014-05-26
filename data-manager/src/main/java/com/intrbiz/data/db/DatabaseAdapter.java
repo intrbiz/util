@@ -49,12 +49,33 @@ import com.intrbiz.data.Transaction;
  * </pre>
  */
 public abstract class DatabaseAdapter implements DataAdapter
-{
+{    
     protected final DatabaseConnection connection;
+    
+    protected int reuseCount = 0;
 
     protected DatabaseAdapter(DatabaseConnection connection)
     {
         this.connection = connection;
+    }
+    
+    /**
+     * Mark the reuse of this adapter, preventing immediate 
+     * closing.  This is meant to be used by factories which 
+     * are implementing ThreadLocal caching.
+     */
+    public void reuse()
+    {
+        this.reuseCount ++;
+    }
+    
+    /**
+     * Get the reuse count for this adapter
+     * @return the reuse count
+     */
+    public int getReuseCount()
+    {
+        return this.reuseCount;
     }
 
     /**
@@ -94,19 +115,28 @@ public abstract class DatabaseAdapter implements DataAdapter
     @Override
     public final void close()
     {
-        try
-        {
-            this.beforeClose();
-        }
-        finally
+        /*
+         * The reuse count should be incremented by a factory 
+         * which implements ThreadLocal caching.  The connection 
+         * will only be closed when the outer most close() happens.
+         */
+        this.reuseCount--;
+        if (this.reuseCount <= 0)
         {
             try
             {
-                this.connection.close();
+                this.beforeClose();
             }
             finally
             {
-                this.afterClose();
+                try
+                {
+                    this.connection.close();
+                }
+                finally
+                {
+                    this.afterClose();
+                }
             }
         }
     }
