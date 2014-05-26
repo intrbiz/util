@@ -12,6 +12,8 @@ import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
 import com.intrbiz.data.db.compiler.dialect.pgsql.function.GetterGenerator;
 import com.intrbiz.data.db.compiler.dialect.pgsql.function.RemoveGenerator;
 import com.intrbiz.data.db.compiler.dialect.pgsql.function.SetterGenerator;
+import com.intrbiz.data.db.compiler.dialect.type.SQLArrayType;
+import com.intrbiz.data.db.compiler.dialect.type.SQLEnumType;
 import com.intrbiz.data.db.compiler.dialect.type.SQLSimpleType;
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
 import com.intrbiz.data.db.compiler.meta.Action;
@@ -26,15 +28,17 @@ import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
+import com.intrbiz.data.db.compiler.model.Unique;
 import com.intrbiz.data.db.compiler.util.SQLCommand;
 import com.intrbiz.data.db.compiler.util.SQLScript;
-import com.intrbiz.data.db.util.DBUtil;
 
 public class PGSQLDialect extends SQLDialect
 {
     private Logger logger = Logger.getLogger(PGSQLDialect.class);
     
     private static final SQLType TYPE_TEXT = new SQLSimpleType("TEXT", "String", String.class);
+    
+    private static final SQLType TYPE_TEXT_ARRAY = new SQLArrayType("TEXT[]", "text" /* Type name must be lower case in postgresql */, String.class);
 
     private static final SQLType TYPE_INTEGER = new SQLSimpleType("INTEGER", "Int", int.class, Integer.class);
 
@@ -50,30 +54,29 @@ public class PGSQLDialect extends SQLDialect
 
     private static final SQLType TYPE_TIMESTAMP = new SQLSimpleType("TIMESTAMP WITH TIME ZONE", "Timestamp", Timestamp.class);
 
-    private static final SQLType TYPE_UUID = new SQLSimpleType("UUID", "String", UUID.class)
+    private static final SQLType TYPE_UUID = new SQLSimpleType("UUID", "Object", UUID.class)
     {
         public void addImports(Set<String> imports)
         {
             imports.add(UUID.class.getCanonicalName());
-            imports.add(DBUtil.class.getCanonicalName());
-        }
-        
-        public String setBinding(int idx, String value)
-        {
-            return "DBUtil.setUUID(stmt, " + idx + ", " + value + ")";
         }
 
         public String getBinding(int idx)
         {
-            return "DBUtil.getUUID(rs, " + idx + ")";
+            return "(UUID)" + super.getBinding(idx);
         }
     };
+    
+    /* PostgreSQL handle converting to java.util.UUID for us :D */
+    private static final SQLType TYPE_UUID_ARRAY = new SQLArrayType("UUID[]", "uuid" /* Type name must be lower case in postgresql */, UUID.class);
     
     private static final SQLType TYPE_MACADDR = new SQLSimpleType("MACADDR", "String", String.class);
     
     private static final SQLType TYPE_CIDR = new SQLSimpleType("CIDR", "String", String.class);
     
     private static final SQLType TYPE_INET = new SQLSimpleType("INET", "String", String.class);
+    
+    private static final SQLType TYPE_JSON = new SQLSimpleType("JSON", "String", String.class);
 
     public PGSQLDialect()
     {
@@ -84,6 +87,7 @@ public class PGSQLDialect extends SQLDialect
         this.registerFunctionGenerator(SQLRemove.class, new RemoveGenerator());
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public SQLType getType(Class<?> javaClass)
     {
@@ -105,6 +109,8 @@ public class PGSQLDialect extends SQLDialect
             return TYPE_DATE;
         else if (UUID.class == javaClass) 
             return TYPE_UUID;
+        else if (Enum.class.isAssignableFrom(javaClass))
+            return new SQLEnumType((Class<? extends Enum<?>>) javaClass);
         throw new RuntimeException("Cannot get SQL type for java class: " + javaClass.getCanonicalName());
     }
     
@@ -112,6 +118,8 @@ public class PGSQLDialect extends SQLDialect
     {
         if ("TEXT".equalsIgnoreCase(sqlType) || "VARCHAR".equalsIgnoreCase(sqlType))
             return TYPE_TEXT;
+        if ("TEXT[]".equalsIgnoreCase(sqlType) || "VARCHAR[]".equalsIgnoreCase(sqlType))
+            return TYPE_TEXT_ARRAY;
         else if ("INT".equalsIgnoreCase(sqlType) || "INTERGER".equalsIgnoreCase(sqlType) || "INT4".equalsIgnoreCase(sqlType))
             return TYPE_INTEGER;
         else if ("BIGINT".equalsIgnoreCase(sqlType) || "INT8".equalsIgnoreCase(sqlType))
@@ -128,12 +136,16 @@ public class PGSQLDialect extends SQLDialect
             return TYPE_DATE;
         else if ("UUID".equalsIgnoreCase(sqlType)) 
             return TYPE_UUID;
+        else if ("UUID[]".equalsIgnoreCase(sqlType)) 
+            return TYPE_UUID_ARRAY;
         else if ("MACADDR".equalsIgnoreCase(sqlType)) 
             return TYPE_MACADDR;
         else if ("INET".equalsIgnoreCase(sqlType)) 
             return TYPE_INET;
         else if ("CIDR".equalsIgnoreCase(sqlType)) 
             return TYPE_CIDR;
+        else if ("JSON".equalsIgnoreCase(sqlType)) 
+            return TYPE_JSON;
         throw new RuntimeException("The SQL type: " + sqlType + " is not supported");
     }
 
@@ -160,6 +172,7 @@ public class PGSQLDialect extends SQLDialect
         {
             if (ns) to.writeln(",");
             to.write("    ").writeid(col.getName()).write(" ").write(col.getType().getSQLType());
+            if (col.isNotNull()) to.write(" NOT NULL");
             ns = true;
         }
         // primary key
@@ -168,6 +181,14 @@ public class PGSQLDialect extends SQLDialect
             if (ns) to.writeln(",");
             to.write("    CONSTRAINT ").writeid(table.getPrimaryKey().getName()).write(" PRIMARY KEY");
             to.write(" (").writeColumnNameList(table.getPrimaryKey().getColumns()).write(")");
+            ns = true;
+        }
+        // unique constraints
+        for (Unique unq : table.getUniques())
+        {
+            if (ns) to.writeln(",");
+            to.write("    CONSTRAINT ").writeid(unq.getName()).write(" UNIQUE");
+            to.write(" (").writeColumnNameList(unq.getColumns()).write(")");
             ns = true;
         }
         to.writeln();

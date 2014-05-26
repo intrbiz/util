@@ -1,5 +1,6 @@
 package com.intrbiz.data.db.compiler.function;
 
+import com.intrbiz.Util;
 import com.intrbiz.data.db.compiler.DatabaseAdapterCompiler;
 import com.intrbiz.data.db.compiler.model.Argument;
 import com.intrbiz.data.db.compiler.model.Column;
@@ -40,7 +41,7 @@ public class GetterCompiler implements FunctionCompiler
         for (Argument arg : function.getArguments())
         {
             arg.getType().addImports(method.getJavaClass().getImports());
-            s.append("      ").append(arg.getType().setBinding(idx + 1, "p" + idx)).append(";\r\n");
+            s.append("      ").append(arg.getType().setBinding(idx + 1, DatabaseAdapterCompiler.applyAdapter(method.getJavaClass(), Util.nullable(arg.getShadowOf(), Column::getAdapter), false, "p" + idx))).append(";\r\n");
             idx++;
         }
         // execute
@@ -57,7 +58,7 @@ public class GetterCompiler implements FunctionCompiler
         for (Column col : info.getTable().getColumns())
         {
             col.getType().addImports(method.getJavaClass().getImports());
-            s.append("          obj.").append(JavaUtil.setterName(col.getDefinition())).append("(").append(col.getType().getBinding(idx + 1)).append(");\r\n");
+            s.append("          obj.").append(JavaUtil.setterName(col.getDefinition())).append("(").append(DatabaseAdapterCompiler.applyAdapter(method.getJavaClass(), col.getAdapter(), true, col.getType().getBinding(idx + 1))).append(");\r\n");
             idx++;
         }
         // return

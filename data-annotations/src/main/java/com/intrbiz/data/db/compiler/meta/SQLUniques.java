@@ -7,7 +7,6 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.TYPE})
-public @interface SQLUnique {
-    String name() default "";
-    String[] columns() default {};
+public @interface SQLUniques {
+    SQLUnique[] value() default {};
 }

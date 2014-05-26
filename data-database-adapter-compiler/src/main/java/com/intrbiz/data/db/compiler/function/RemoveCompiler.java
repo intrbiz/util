@@ -1,7 +1,9 @@
 package com.intrbiz.data.db.compiler.function;
 
+import com.intrbiz.Util;
 import com.intrbiz.data.db.compiler.DatabaseAdapterCompiler;
 import com.intrbiz.data.db.compiler.model.Argument;
+import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.util.compiler.model.JavaField;
 import com.intrbiz.util.compiler.model.JavaMethod;
@@ -32,7 +34,7 @@ public class RemoveCompiler implements FunctionCompiler
         {
 
             arg.getType().addImports(method.getJavaClass().getImports());
-            s.append("      ").append(arg.getType().setBinding(idx + 1, "p" + idx)).append(";\r\n");
+            s.append("      ").append(arg.getType().setBinding(idx + 1, DatabaseAdapterCompiler.applyAdapter(method.getJavaClass(), Util.nullable(arg.getShadowOf(), Column::getAdapter), false, "p" + idx))).append(";\r\n");
             idx++;
         }
         // execute

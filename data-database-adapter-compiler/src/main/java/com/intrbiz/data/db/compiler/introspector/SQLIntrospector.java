@@ -28,6 +28,8 @@ import com.intrbiz.data.db.compiler.meta.SQLRemove;
 import com.intrbiz.data.db.compiler.meta.SQLSchema;
 import com.intrbiz.data.db.compiler.meta.SQLSetter;
 import com.intrbiz.data.db.compiler.meta.SQLTable;
+import com.intrbiz.data.db.compiler.meta.SQLUnique;
+import com.intrbiz.data.db.compiler.meta.SQLUniques;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.ForeignKey;
 import com.intrbiz.data.db.compiler.model.Function;
@@ -36,9 +38,11 @@ import com.intrbiz.data.db.compiler.model.PrimaryKey;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
+import com.intrbiz.data.db.compiler.model.Unique;
 import com.intrbiz.data.db.compiler.model.Version;
 import com.intrbiz.data.db.compiler.util.SQLScript;
 import com.intrbiz.data.db.compiler.util.TextUtil;
+import com.intrbiz.data.db.util.DBTypeAdapter;
 import com.intrbiz.metadata.ListOf;
 
 public class SQLIntrospector
@@ -213,6 +217,8 @@ public class SQLIntrospector
             this.buildPrimaryKey(dialect, cls, table);
             // foreign keys
             this.buildForeignKeys(dialect, cls, table);
+            // unqiues
+            this.buildUniques(dialect, cls, table);
         }
         return table;
     }
@@ -237,6 +243,7 @@ public class SQLIntrospector
         }
     }
 
+    @SuppressWarnings("unchecked")
     protected Column buildColumn(SQLDialect dialect, Field field, Class<?> cls)
     {
         SQLColumn sa = field.getAnnotation(SQLColumn.class);
@@ -245,9 +252,12 @@ public class SQLIntrospector
             String name = getColumnName(field);
             // if the @SQLColumn annotation defines a explicit SQL type use that in preference
             SQLType type =  Util.isEmpty(sa.type()) ? dialect.getType(field.getType()) : dialect.getType(sa.type());
-            if (! type.isCompatibleWith(field.getType()))
+            // we can't check the types the adapter returns due to erasure :(
+            if ((! type.isCompatibleWith(field.getType())) && sa.adapter() == SQLColumn.NullAdapter.class)
+            {
                 throw new RuntimeException("The field type: " + field.getType() + " is not compatible with the SQL Type: " + type.getSQLType() + " (" + type.getDefaultJavaType().getCanonicalName() + ")");
-            return new Column(sa.index(), name, type, field);
+            }
+            return new Column(sa.index(), name, type, field, sa.notNull(), sa.adapter() == SQLColumn.NullAdapter.class ? null : (Class<? extends DBTypeAdapter<?,?>>) sa.adapter());
         }
         return null;
     }
@@ -310,6 +320,74 @@ public class SQLIntrospector
                 key.setOnUpdate(fkey.onUpdate());
                 key.setOnDelete(fkey.onDelete());
                 key.setDeferable(fkey.deferable());
+            }
+        }
+    }
+    
+    protected void buildUniques(SQLDialect dialect, Class<?> cls, Table table)
+    {
+        if (cls == null) return;
+        this.buildUniques(dialect, cls.getSuperclass(), table);
+        // look on the table
+        List<SQLUnique> tblUnq = new LinkedList<SQLUnique>();
+        if (cls.getAnnotation(SQLUnique.class) != null)
+        {
+            tblUnq.add(cls.getAnnotation(SQLUnique.class));
+        }
+        if (cls.getAnnotation(SQLUniques.class) != null)
+        {
+            for (SQLUnique unq : cls.getAnnotation(SQLUniques.class).value())
+            {
+                tblUnq.add(unq);
+            }
+        }
+        for (SQLUnique unq : tblUnq)
+        {
+            if (Util.isEmpty(unq.name())) throw new RuntimeException("No name given for unique constraint on table " + table.getName() + ". Caused by " + cls);
+            if (unq.columns().length == 0) throw new RuntimeException("No columns given for unique constraint on table " + table.getName() + ". Caused by " + cls);
+            //
+            Unique u = new Unique();
+            u.setName(table.getName() + "_" + unq.name());
+            for (String colName : unq.columns())
+            {
+                Column col = table.findColumn(colName);
+                if (col == null) throw new RuntimeException("The column " + colName + " does not exist on table " + table.getName() + ".  Caused by " + cls);
+                u.addColumn(col);
+            }
+            table.addUnique(u);
+        }
+        // the fields
+        for (Field field : cls.getDeclaredFields())
+        {
+            SQLUnique unq = field.getAnnotation(SQLUnique.class);
+            if (unq != null)
+            {
+                Unique u = new Unique();
+                // name
+                if (Util.isEmpty(unq.name()))
+                {
+                    u.setName(table.getName() + "_" + getColumnName(field) + "_unq");
+                }
+                else
+                {
+                    u.setName(table.getName() + "_" + unq.name());
+                }
+                // columns
+                if (unq.columns().length == 0)
+                {
+                    Column col = table.findColumn(getColumnName(field));
+                    u.addColumn(col);
+                }
+                else
+                {
+                    for (String colName : unq.columns())
+                    {
+                        Column col = table.findColumn(colName);
+                        if (col == null) throw new RuntimeException("The column " + colName + " does not exist on table " + table.getName() + ".  Caused by " + field);
+                        u.addColumn(col);
+                    }
+                }
+                table.addUnique(u);
             }
         }
     }

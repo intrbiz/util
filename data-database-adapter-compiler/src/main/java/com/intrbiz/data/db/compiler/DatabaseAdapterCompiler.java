@@ -42,6 +42,7 @@ import com.intrbiz.data.db.compiler.model.Version;
 import com.intrbiz.data.db.compiler.util.SQLCommand;
 import com.intrbiz.data.db.compiler.util.SQLScript;
 import com.intrbiz.data.db.compiler.util.SQLScriptSet;
+import com.intrbiz.data.db.util.DBUtil;
 import com.intrbiz.util.compiler.CompilerTool;
 import com.intrbiz.util.compiler.model.JavaClass;
 import com.intrbiz.util.compiler.model.JavaField;
@@ -57,7 +58,7 @@ public class DatabaseAdapterCompiler
     {
         return new DatabaseAdapterCompiler(new PGSQLDialect());
     }
-    
+
     public static final DatabaseAdapterCompiler defaultPGSQLCompiler(String defaultOwner)
     {
         return new DatabaseAdapterCompiler(new PGSQLDialect()).setDefaultOwner(defaultOwner);
@@ -68,9 +69,9 @@ public class DatabaseAdapterCompiler
     private final SQLIntrospector introspector;
 
     private Map<Class<? extends Annotation>, FunctionCompiler> functionCompilers = new IdentityHashMap<Class<? extends Annotation>, FunctionCompiler>();
-    
+
     // options
-    
+
     private boolean withMetrics = true;
 
     private DatabaseAdapterCompiler(SQLDialect dialect, SQLIntrospector introspector)
@@ -121,38 +122,38 @@ public class DatabaseAdapterCompiler
     {
         return this.functionCompilers.get(type);
     }
-    
+
     // owner
-    
+
     public String getOwner()
     {
         return this.dialect.getOwner();
     }
-    
+
     public DatabaseAdapterCompiler setOwner(String owner)
     {
         this.dialect.setOwner(owner);
         return this;
     }
-    
+
     public String getDefaultOwner()
     {
         return this.getDefaultOwner();
     }
-    
+
     public DatabaseAdapterCompiler setDefaultOwner(String owner)
     {
         this.dialect.setDefaultOwner(owner);
         return this;
     }
-    
+
     // options
-    
+
     public boolean isWithMetrics()
     {
         return this.withMetrics;
     }
-    
+
     public DatabaseAdapterCompiler setWithMetrics(boolean withMetrics)
     {
         this.withMetrics = withMetrics;
@@ -312,6 +313,7 @@ public class DatabaseAdapterCompiler
 
     /**
      * Install or upgrade the given database to the current version
+     * 
      * @param database
      * @param cls
      */
@@ -363,8 +365,23 @@ public class DatabaseAdapterCompiler
         fact.addImport(DatabaseAdapterFactory.class.getCanonicalName());
         fact.addImport(DatabaseConnection.class.getCanonicalName());
         fact.addImport(impl.getCanonicalName());
+        fact.addImport(ThreadLocal.class.getCanonicalName());
         fact.addSuperInterface(DatabaseAdapterFactory.class.getSimpleName());
-        fact.newMethod(impl.getSimpleName(), "create", new JavaParameter("DatabaseConnection", "connection")).append("return new " + impl.getSimpleName() + "(connection);");
+        fact.newField("ThreadLocal<" + impl.getSimpleName() + ">", "localAdapter").setValue("new ThreadLocal<" + impl.getSimpleName() + ">()");
+        fact.newMethod(impl.getSimpleName(), "create", new JavaParameter("DatabaseConnection", "connection"))
+        .append(impl.getSimpleName() + " adap = this.localAdapter.get();\r\n")
+        .append("if (adap == null) {\r\n")
+        .append("  adap = new " + impl.getSimpleName() + "(connection) {\r\n")
+        .append("    protected void beforeClose() {\r\n")
+        .append("      System.out.println(\"Uncaching database adapter.\");\r\n")
+        .append("      localAdapter.set(null);\r\n")
+        .append("      super.beforeClose();\r\n")
+        .append("    }")
+        .append("  };")
+        .append("  this.localAdapter.set(adap);\r\n")
+        .append("}\r\n")
+        .append("adap.reuse();\r\n")
+        .append("return adap;");
         //
         try
         {
@@ -395,6 +412,7 @@ public class DatabaseAdapterCompiler
         impl.addImport(ResultSet.class.getCanonicalName());
         impl.addImport(SQLException.class.getCanonicalName());
         impl.addImport(Exception.class.getCanonicalName());
+        impl.addImport(DBUtil.class.getCanonicalName());
         // super class
         impl.setSuperClass(cls.getSimpleName());
         // default constructor
@@ -449,7 +467,7 @@ public class DatabaseAdapterCompiler
         FunctionCompiler compiler = this.getFunctionCompiler(function.getFunctionType().annotationType());
         if (compiler != null) compiler.compileFunctionBinding(this, method, function);
     }
-    
+
     public static JavaField addMetricField(JavaMethod method, Function function)
     {
         method.getJavaClass().addImport(Timer.class.getCanonicalName());
@@ -459,7 +477,18 @@ public class DatabaseAdapterCompiler
         metricField.setValue("Metrics.newTimer(" + function.getSchema().getDefinition().getSimpleName() + ".class, \"" + JavaUtil.escapeString(function.getSignature()) + "\", TimeUnit.MICROSECONDS, TimeUnit.SECONDS)");
         return metricField;
     }
-    
+
+    public static String applyAdapter(JavaClass cls, Class<?> adapter, boolean from, String value)
+    {
+        if (adapter != null)
+        {
+            cls.addImport(adapter.getCanonicalName());
+            //
+            return "DBUtil.adapt" + ( from ? "From" : "To" ) + "DB(" + value + ", new " + adapter.getSimpleName() + "())";
+        }
+        return value;
+    }
+
     /**
      * Quick and dirty utility to output schemas etc
      */

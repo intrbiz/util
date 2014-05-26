@@ -19,6 +19,8 @@ public class Table
 
     private Version since;
 
+    private List<Unique> uniques = new LinkedList<Unique>();
+
     public Table()
     {
         super();
@@ -142,6 +144,21 @@ public class Table
     public void setSince(Version since)
     {
         this.since = since;
+    }
+
+    public List<Unique> getUniques()
+    {
+        return uniques;
+    }
+
+    public void setUniques(List<Unique> uniques)
+    {
+        this.uniques = uniques;
+    }
+
+    public void addUnique(Unique unq)
+    {
+        this.uniques.add(unq);
     }
 
     public String toString()

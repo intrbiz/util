@@ -3,6 +3,7 @@ package com.intrbiz.data.db.compiler.model;
 import java.lang.reflect.Field;
 
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
+import com.intrbiz.data.db.util.DBTypeAdapter;
 
 public class Column implements Comparable<Column>
 {
@@ -15,6 +16,10 @@ public class Column implements Comparable<Column>
     private Field definition;
 
     private Version since;
+
+    private boolean notNull;
+
+    private Class<? extends DBTypeAdapter<?, ?>> adapter;
 
     public Column()
     {
@@ -34,11 +39,13 @@ public class Column implements Comparable<Column>
         this.index = index;
     }
 
-    public Column(int index, String name, SQLType type, Field definition)
+    public Column(int index, String name, SQLType type, Field definition, boolean notNull, Class<? extends DBTypeAdapter<?, ?>> adapter)
     {
         this(name, type);
         this.index = index;
         this.definition = definition;
+        this.notNull = notNull;
+        this.adapter = adapter;
     }
 
     public String getName()
@@ -89,6 +96,26 @@ public class Column implements Comparable<Column>
     public void setSince(Version since)
     {
         this.since = since;
+    }
+
+    public boolean isNotNull()
+    {
+        return notNull;
+    }
+
+    public void setNotNull(boolean notNull)
+    {
+        this.notNull = notNull;
+    }
+
+    public Class<? extends DBTypeAdapter<?, ?>> getAdapter()
+    {
+        return adapter;
+    }
+
+    public void setAdapter(Class<? extends DBTypeAdapter<?, ?>> adapter)
+    {
+        this.adapter = adapter;
     }
 
     @Override
