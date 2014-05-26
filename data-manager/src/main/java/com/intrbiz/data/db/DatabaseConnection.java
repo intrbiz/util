@@ -335,6 +335,7 @@ public class DatabaseConnection implements AutoCloseable
      * 
      * @param <T>
      */
+    @FunctionalInterface()
     public static interface DatabaseCall<T>
     {
         public T run(final Connection with) throws SQLException, DataException;
