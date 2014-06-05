@@ -19,7 +19,7 @@ public class QueueManager
     
     private final ConcurrentMap<String, QueueBrokerPool<?>> brokers = new ConcurrentHashMap<String, QueueBrokerPool<?>>();
     
-    private final ConcurrentMap<Class<? extends QueueAdapter>, QueueAdapterFactory<?>> queueAdapters = new ConcurrentHashMap<Class<? extends QueueAdapter>, QueueAdapterFactory<?>>();
+    private final ConcurrentMap<Class<? extends QueueAdapter>, QueueAdapterFactory<?,?>> queueAdapters = new ConcurrentHashMap<Class<? extends QueueAdapter>, QueueAdapterFactory<?,?>>();
     
     private QueueManager()
     {
@@ -51,40 +51,40 @@ public class QueueManager
     
     // adapters
     
-    public <T extends QueueAdapter> void registerQueueAdapter(Class<T> cls, QueueAdapterFactory<T> factory)
+    public <T extends QueueAdapter, B> void registerQueueAdapter(Class<T> cls, QueueAdapterFactory<T,B> factory)
     {
         this.queueAdapters.put(cls, factory);
     }
     
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public <T extends QueueAdapter> T queueAdapter(Class<T> cls, QueueBrokerPool<?> broker)
     {
-        QueueAdapterFactory<?> factory = this.queueAdapters.get(cls);
+        QueueAdapterFactory factory = this.queueAdapters.get(cls);
         if (factory == null) throw new RuntimeException("No implementation is registered for " + cls.getName());
         return (T) factory.create(broker);
     }
     
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public <T extends QueueAdapter> T queueAdapter(Class<T> cls)
     {
         if (this.defaultBroker == null) throw new RuntimeException("Cannot connect to the default broker, it is not registered");
-        QueueAdapterFactory<?> factory = this.queueAdapters.get(cls);
+        QueueAdapterFactory factory = this.queueAdapters.get(cls);
         if (factory == null) throw new RuntimeException("No implementation is registered for " + cls.getName());
         return (T) factory.create(this.defaultBroker);
     }
     
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public <T extends QueueAdapter> T queueAdapter(Class<T> cls, String broker)
     {
-        QueueBrokerPool<?> brokerPool = this.broker(broker);
+        QueueBrokerPool brokerPool = this.broker(broker);
         if (broker == null) throw new RuntimeException("Cannot connect to the " + broker + " broker, it is not registered");
-        QueueAdapterFactory<?> factory = this.queueAdapters.get(cls);
+        QueueAdapterFactory factory = this.queueAdapters.get(cls);
         if (factory == null) throw new RuntimeException("No implementation is registered for " + cls.getName());
         return (T) factory.create(brokerPool);
     }
     
-    public static interface QueueAdapterFactory<T extends QueueAdapter>
+    public static interface QueueAdapterFactory<T extends QueueAdapter, B>
     {
-        T create(QueueBrokerPool<?> broker);
+        T create(QueueBrokerPool<B> broker);
     }
 }

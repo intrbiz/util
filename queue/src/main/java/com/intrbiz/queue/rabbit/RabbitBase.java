@@ -1,6 +1,8 @@
 package com.intrbiz.queue.rabbit;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.intrbiz.queue.QueueBrokerPool;
 import com.intrbiz.queue.QueueEventTranscoder;
@@ -11,9 +13,9 @@ import com.rabbitmq.client.ShutdownSignalException;
 
 public abstract class RabbitBase<T> implements AutoCloseable
 {
-    protected final QueueBrokerPool<Channel> broker;
+    protected QueueBrokerPool<Channel> broker;
     
-    protected final QueueEventTranscoder<T> transcoder;
+    protected QueueEventTranscoder<T> transcoder;
     
     protected volatile boolean closed;
 
@@ -48,6 +50,23 @@ public abstract class RabbitBase<T> implements AutoCloseable
     }
     
     protected abstract void setup() throws IOException;
+    
+    //
+    
+    protected Map<String, Object> args(String name, Object value)
+    {
+        Map<String, Object> args = new HashMap<String, Object>();
+        args.put(name, value);
+        return args;
+    }
+    
+    protected Map<String, Object> args(Map<String, Object> args, String name, Object value)
+    {
+        args.put(name, value);
+        return args;
+    }
+    
+    //
     
     @Override
     public void close()
