@@ -206,7 +206,7 @@ public class SQLIntrospector
             // get the schema
             Schema schema = this.buildSchema(dialect, sqlTable.schema());
             // the table
-            table = new Table(schema, getTableName(cls), cls);
+            table = new Table(schema, getTableName(cls), cls, sqlTable.virtual());
             this.tableCache.put(cls, table);
             // since
             table.setSince(new Version(sqlTable.since()));

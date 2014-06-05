@@ -23,8 +23,9 @@ public class RemoveCompiler implements FunctionCompiler
         s.append("this.connection.");
         if (compiler.isWithMetrics()) s.append("useTimed(this.").append(metricField.getName()).append(", ");
         else s.append("use(");
-        s.append("new DatabaseCall<Object>() {\r\n");
-        s.append("  public Object run(final Connection with) throws SQLException, DataException {\r\n");
+        /*s.append("new DatabaseCall<Object>() {\r\n");*/
+        s.append("(with) -> {\r\n");
+        /*s.append("  public Object run(final Connection with) throws SQLException, DataException {\r\n");*/
         //
         s.append("    try (PreparedStatement stmt = with.prepareStatement(\"").append(JavaUtil.escapeString(compiler.getDialect().getFunctionCallQuery(function).toString())).append("\"))\r\n");
         s.append("    {\r\n");
@@ -42,7 +43,7 @@ public class RemoveCompiler implements FunctionCompiler
         s.append("    }\r\n");
         s.append("    return null;\r\n");
         //
-        s.append("  }\r\n");
+        /*s.append("  }\r\n");*/
         s.append("});\r\n");
     }
 

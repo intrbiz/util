@@ -28,13 +28,18 @@ public class DBUtil
     
     public static <T extends Enum<T>> T getEnum(ResultSet rs, int index, Class<T> type) throws SQLException
     {
-        String value = rs.getString(index);
-        return value == null ? null : Enum.valueOf(type, value);
+        int value = rs.getInt(index);
+        for (T t : type.getEnumConstants())
+        {
+            if (t.ordinal() == value)
+                return t;
+        }
+        return null;
     }
     
     public static <T extends Enum<T>> void setEnum(PreparedStatement stmt, int index, T value) throws SQLException
     {
-        stmt.setString(index, value == null ? null : value.toString());
+        stmt.setInt(index, value == null ? -1 : value.ordinal());
     }
     
     //

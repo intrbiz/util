@@ -29,8 +29,9 @@ public class GetterCompiler implements FunctionCompiler
         s.append("return this.connection.");
         if (compiler.isWithMetrics()) s.append("useTimed(this.").append(metricField.getName()).append(", ");
         else s.append("use(");
-        s.append("new DatabaseCall<").append(method.getReturnType()).append(">() {\r\n");
-        s.append("  public ").append(method.getReturnType()).append(" run(final Connection with) throws SQLException, DataException {\r\n");
+        /* s.append("new DatabaseCall<").append(method.getReturnType()).append(">() {\r\n"); */
+        s.append("(with) -> {\r\n");
+        /*s.append("  public ").append(method.getReturnType()).append(" run(final Connection with) throws SQLException, DataException {\r\n");*/
         //
         if (function.isReturnsList()) s.append("    List<").append(objType).append("> ret = new LinkedList<").append(objType).append(">();\r\n");
         //
@@ -71,7 +72,7 @@ public class GetterCompiler implements FunctionCompiler
         if (function.isReturnsList()) s.append("    return ret;\r\n");
         else s.append("    return null;\r\n");
         //
-        s.append("  }\r\n");
+        /*s.append("  }\r\n");*/
         s.append("});\r\n");
     }
 

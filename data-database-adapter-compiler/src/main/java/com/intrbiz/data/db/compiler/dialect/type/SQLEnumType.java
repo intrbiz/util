@@ -14,7 +14,7 @@ public class SQLEnumType implements SQLType
     @Override
     public String getSQLType()
     {
-        return "TEXT";
+        return "INTEGER";
     }
 
     @Override

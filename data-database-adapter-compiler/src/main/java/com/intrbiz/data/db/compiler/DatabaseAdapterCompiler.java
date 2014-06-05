@@ -174,12 +174,12 @@ public class DatabaseAdapterCompiler
         // create all the tables
         for (Table table : schema.getTables())
         {
-            set.add(this.dialect.writeCreateTable(table));
+            if (! table.isVirtual()) set.add(this.dialect.writeCreateTable(table));
         }
         // add all foreign keys
         for (Table table : schema.getTables())
         {
-            set.add(this.dialect.writeCreateTableForeignKeys(table));
+            if (! table.isVirtual()) set.add(this.dialect.writeCreateTableForeignKeys(table));
         }
         //
         for (Type type : schema.getTypes())
@@ -214,7 +214,7 @@ public class DatabaseAdapterCompiler
         // install any new tables
         for (Table table : schema.getTables())
         {
-            if (table.getSince().isAfter(installedVersion))
+            if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()))
             {
                 set.add(this.dialect.writeCreateTable(table));
             }
@@ -222,7 +222,7 @@ public class DatabaseAdapterCompiler
         // install foreign keys for any new tables
         for (Table table : schema.getTables())
         {
-            if (table.getSince().isAfter(installedVersion))
+            if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()))
             {
                 set.add(this.dialect.writeCreateTableForeignKeys(table));
             }

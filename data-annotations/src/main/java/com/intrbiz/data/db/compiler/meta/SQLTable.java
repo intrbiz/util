@@ -12,4 +12,5 @@ public @interface SQLTable
     Class<?> schema();
     String  name();
     SQLVersion since();
+    boolean virtual() default false;
 }

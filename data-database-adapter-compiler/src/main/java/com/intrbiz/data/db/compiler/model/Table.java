@@ -21,6 +21,8 @@ public class Table
 
     private List<Unique> uniques = new LinkedList<Unique>();
 
+    private boolean virtual = false;
+
     public Table()
     {
         super();
@@ -39,12 +41,13 @@ public class Table
         this.name = name;
     }
 
-    public Table(Schema schema, String name, Class<?> definition)
+    public Table(Schema schema, String name, Class<?> definition, boolean virtual)
     {
         this();
         this.schema = schema;
         this.name = name;
         this.definition = definition;
+        this.virtual = virtual;
     }
 
     public Schema getSchema()
@@ -159,6 +162,16 @@ public class Table
     public void addUnique(Unique unq)
     {
         this.uniques.add(unq);
+    }
+
+    public boolean isVirtual()
+    {
+        return virtual;
+    }
+
+    public void setVirtual(boolean virtual)
+    {
+        this.virtual = virtual;
     }
 
     public String toString()
