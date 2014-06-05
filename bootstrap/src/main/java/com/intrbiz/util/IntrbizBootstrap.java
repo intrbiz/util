@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -40,7 +41,17 @@ public class IntrbizBootstrap
         String appClassName = getAppClass(jar);
         // load the app class
         Class<?> appClass = classLoader.loadClass(appClassName);
-        Method main = appClass.getMethod("main", String[].class);
+        if (appClass == null)
+        {
+            System.out.println("Failed to load class: " + appClassName);
+            System.exit(-1);
+        }
+        Method main = appClass.getDeclaredMethod("main", String[].class);
+        if (main == null || (! Modifier.isStatic(main.getModifiers())))
+        {
+            System.out.println("Could not find main method on class: " + appClass);
+            System.exit(-1);
+        }
         main.invoke(null, new Object[] { args });
     }
     
