@@ -3,6 +3,8 @@ package com.intrbiz.data.db;
 import com.intrbiz.data.DataAdapter;
 import com.intrbiz.data.DataException;
 import com.intrbiz.data.Transaction;
+import com.intrbiz.data.db.DatabaseConnection.DatabaseCall;
+import com.yammer.metrics.core.Timer;
 
 /**
  * <p>
@@ -159,4 +161,50 @@ public abstract class DatabaseAdapter implements DataAdapter
     {
         this.connection.execute(transaction);
     }
+    
+    /*
+     * Some delegate messages
+     */
+
+    public void execute(DatabaseCall<Void> transaction) throws DataException
+    {
+        connection.execute(transaction);
+    }
+
+    public boolean isInTransaction()
+    {
+        return connection.isInTransaction();
+    }
+
+    public void begin() throws DataException
+    {
+        connection.begin();
+    }
+
+    public void rollback() throws DataException
+    {
+        connection.rollback();
+    }
+
+    public void commit() throws DataException
+    {
+        connection.commit();
+    }
+
+    public void end()
+    {
+        connection.end();
+    }
+
+    public <T> T use(DatabaseCall<T> call) throws DataException
+    {
+        return connection.use(call);
+    }
+
+    public <T> T useTimed(Timer timer, DatabaseCall<T> call) throws DataException
+    {
+        return connection.useTimed(timer, call);
+    }
+    
+    
 }
