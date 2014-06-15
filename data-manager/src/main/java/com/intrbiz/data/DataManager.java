@@ -3,6 +3,8 @@ package com.intrbiz.data;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import com.intrbiz.data.cache.Cache;
+import com.intrbiz.data.cache.memory.shared.SharedMemoryCacheProvider;
 import com.intrbiz.data.db.DatabaseAdapter;
 import com.intrbiz.data.db.DatabaseConnection;
 import com.intrbiz.util.pool.database.DatabasePool;
@@ -16,9 +18,24 @@ public final class DataManager
         return US;
     }
     
+    public static final DataManager get()
+    {
+        return US;
+    }
+    
+    // pools
+    
     private DatabasePool defaultPool = null;
     
     private ConcurrentMap<String, DatabasePool> servers = new ConcurrentHashMap<String, DatabasePool>();
+    
+    // cache providers
+    
+    private CacheProvider defaultCache = new SharedMemoryCacheProvider();
+    
+    private ConcurrentMap<String, CacheProvider> caches = new ConcurrentHashMap<String, CacheProvider>();
+    
+    // adapters
     
     private ConcurrentMap<Class<? extends DataAdapter>, DataAdapterFactory<?>> dataAdapters = new ConcurrentHashMap<Class<? extends DataAdapter>, DataAdapterFactory<?>>(); 
     
@@ -28,6 +45,8 @@ public final class DataManager
     {
         super();
     }
+    
+    // pools
     
     public void registerDefaultServer(DatabasePool pool)
     {
@@ -97,15 +116,56 @@ public final class DataManager
         return (T) this.dataAdapters.get(type).create();
     }
     
+    // cache providers
+    
+    public void registerDefaultCacheProvider(CacheProvider provider)
+    {
+        this.defaultCache = provider;
+    }
+    
+    public CacheProvider defaultCacheProvider()
+    {
+        return this.defaultCache;
+    }
+    
+    public void registerCacheProvider(String name, CacheProvider provider)
+    {
+        this.caches.put(name, provider);
+    }
+    
+    public CacheProvider cacheProvider(String name)
+    {
+        return this.caches.get(name);
+    }
+    
+    public Cache cache(String name)
+    {
+        return this.defaultCache == null ? null : (Cache) this.defaultCache.getCache(name);
+    }
+    
+    public Cache cache(String provider, String name)
+    {
+        CacheProvider cp = this.caches.get(provider);
+        return cp == null ? null : (Cache) cp.getCache(name);
+    }
+    
     // factories
     
+    @FunctionalInterface
     public static interface DatabaseAdapterFactory<T extends DatabaseAdapter>
     {
         T create(DatabaseConnection con);
     }
     
+    @FunctionalInterface
     public static interface DataAdapterFactory<T extends DataAdapter>
     {
         T create();
+    }
+    
+    @FunctionalInterface
+    public static interface CacheProvider
+    {
+        Cache getCache(String name);
     }
 }

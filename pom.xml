@@ -65,7 +65,8 @@
 		<module>data-database-adapter-compiler</module>
 		<module>data-annotations</module>
 		<module>packaging</module>
-    <module>bootstrap</module>
+	    <module>bootstrap</module>
+	    <module>cache-hazelcast</module>
   </modules>
 	<dependencyManagement>
 		<dependencies>
