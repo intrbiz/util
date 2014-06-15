@@ -16,7 +16,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.log4j.Logger;
 
 import com.intrbiz.data.DataException;
+import com.intrbiz.data.DataManager;
 import com.intrbiz.data.DataManager.DatabaseAdapterFactory;
+import com.intrbiz.data.cache.Cache;
 import com.intrbiz.data.db.DatabaseAdapter;
 import com.intrbiz.data.db.DatabaseConnection;
 import com.intrbiz.data.db.DatabaseConnection.DatabaseCall;
@@ -33,6 +35,7 @@ import com.intrbiz.data.db.compiler.meta.SQLGetter;
 import com.intrbiz.data.db.compiler.meta.SQLRemove;
 import com.intrbiz.data.db.compiler.meta.SQLSetter;
 import com.intrbiz.data.db.compiler.meta.ScriptType;
+import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Patch;
 import com.intrbiz.data.db.compiler.model.Schema;
@@ -50,6 +53,7 @@ import com.intrbiz.util.compiler.model.JavaMethod;
 import com.intrbiz.util.compiler.model.JavaParameter;
 import com.intrbiz.util.compiler.util.JavaUtil;
 import com.yammer.metrics.Metrics;
+import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.Timer;
 
 public class DatabaseAdapterCompiler
@@ -412,10 +416,12 @@ public class DatabaseAdapterCompiler
         impl.addImport(SQLException.class.getCanonicalName());
         impl.addImport(Exception.class.getCanonicalName());
         impl.addImport(DBUtil.class.getCanonicalName());
+        // impl.addImport(Cache.class.getCanonicalName());
+        impl.addImport(DataManager.class.getCanonicalName());
         // super class
         impl.setSuperClass(cls.getSimpleName());
         // default constructor
-        impl.newConstructor(new JavaParameter("DatabaseConnection", "connection")).append("super(connection);");
+        impl.newConstructor(new JavaParameter("DatabaseConnection", "connection")).append("super(connection, DataManager.get().cache(\"cache." + JavaUtil.escapeString(schema.getName()) + "\"));");
         // info functions
         this.compileSchemaName(impl, schema);
         this.compileSchemaVersion(impl, schema);
@@ -469,11 +475,20 @@ public class DatabaseAdapterCompiler
 
     public static JavaField addMetricField(JavaMethod method, Function function)
     {
+        method.getJavaClass().addImport(Meter.class.getCanonicalName());
         method.getJavaClass().addImport(Timer.class.getCanonicalName());
         method.getJavaClass().addImport(Metrics.class.getCanonicalName());
         method.getJavaClass().addImport(TimeUnit.class.getCanonicalName());
-        JavaField metricField = method.getJavaClass().newUniqueField(Timer.class.getSimpleName(), function.getName());
-        metricField.setValue("Metrics.newTimer(" + function.getSchema().getDefinition().getSimpleName() + ".class, \"" + JavaUtil.escapeString(function.getSignature()) + "\", TimeUnit.MICROSECONDS, TimeUnit.SECONDS)");
+        JavaField metricField = method.getJavaClass().newUniqueField(Timer.class.getSimpleName(), function.getName()).setValue("Metrics.newTimer(" + function.getSchema().getDefinition().getSimpleName() + ".class, \"" + JavaUtil.escapeString(function.getSignature()) + "\", TimeUnit.MICROSECONDS, TimeUnit.SECONDS)");
+        return metricField;
+    }
+    
+    public static JavaField addCacheMissMetricField(JavaMethod method, Function function)
+    {
+        method.getJavaClass().addImport(Meter.class.getCanonicalName());
+        method.getJavaClass().addImport(Metrics.class.getCanonicalName());
+        method.getJavaClass().addImport(TimeUnit.class.getCanonicalName());
+        JavaField metricField = method.getJavaClass().newUniqueField(Meter.class.getSimpleName(), "cache_miss_" + function.getName()).setValue("Metrics.newMeter(" + function.getSchema().getDefinition().getSimpleName() + ".class, \"cache_miss." + JavaUtil.escapeString(function.getSignature()) + "\", \"misses\", TimeUnit.SECONDS)");
         return metricField;
     }
 
@@ -486,6 +501,20 @@ public class DatabaseAdapterCompiler
             return "DBUtil.adapt" + ( from ? "From" : "To" ) + "DB(" + value + ", new " + adapter.getSimpleName() + "())";
         }
         return value;
+    }
+    
+    public static String tableCacheKey(Table table)
+    {
+        StringBuilder sb = new StringBuilder("(t) -> { return \"").append(JavaUtil.escapeString(table.getName())).append(".\"");
+        boolean ns = false;
+        for (Column column : table.getPrimaryKey().getColumns())
+        {
+            if (ns) sb.append(" + \".\"");
+            sb.append(" + t.").append(JavaUtil.getterName(column.getDefinition())).append("()");
+            ns = true;
+        }
+        sb.append("; }");
+        return sb.toString();
     }
 
     /**

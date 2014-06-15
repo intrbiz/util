@@ -31,7 +31,7 @@ public class RemoveIntrospector implements SQLFunctionIntrospector
         // table type
         Class<?> tableCls = remove.table();
         Table table = introspector.buildTable(dialect, tableCls);
-        info.setTable(table);
+        function.setTable(table);
         // the arguments are SQLParams to delete by
         Class<?>[] argTypes = method.getParameterTypes();
         Annotation[][] argAnnotations = method.getParameterAnnotations();

@@ -20,7 +20,7 @@ public class RemoveCompiler implements FunctionCompiler
         JavaField  metricField = null;
         if (compiler.isWithMetrics()) metricField = DatabaseAdapterCompiler.addMetricField(method, function);
         //
-        s.append("this.connection.");
+        s.append("this.");
         if (compiler.isWithMetrics()) s.append("useTimed(this.").append(metricField.getName()).append(", ");
         else s.append("use(");
         /*s.append("new DatabaseCall<Object>() {\r\n");*/
@@ -45,6 +45,38 @@ public class RemoveCompiler implements FunctionCompiler
         //
         /*s.append("  }\r\n");*/
         s.append("});\r\n");
+        // clean up the cache
+        if (function.isCacheable())
+        {
+            // TODO optimise for when we remove by primary key
+            if (function.isAllArgumentsPrimaryKey())
+            {
+                s.append("this.getAdapterCache().remove(\"").append(JavaUtil.escapeString(function.getTable().getName())).append(".\"");
+                boolean ns = false;
+                for (Column column : function.getTable().getPrimaryKey().getColumns())
+                {
+                    idx = 0;
+                    for (Argument arg : function.getArguments())
+                    {
+                        if (column.equals(arg.getShadowOf()))
+                        {
+                            if (ns) s.append(" + \".\"");
+                            s.append(" + p").append(idx);
+                            ns = true;
+                            break;
+                        }
+                        idx++;
+                    }
+                }
+                s.append(");");
+            }
+            else
+            {
+                // remove all objects starting with the table prefix
+                s.append("this.getAdapterCache().removePrefix(\"").append(JavaUtil.escapeString(function.getTable().getName())).append(".\");\r\n");
+            }
+        }
     }
 
+    
 }

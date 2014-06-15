@@ -20,7 +20,7 @@ public class SetterCompiler implements FunctionCompiler
         JavaField  metricField = null;
         if (compiler.isWithMetrics()) metricField = DatabaseAdapterCompiler.addMetricField(method, function);
         //
-        s.append("this.connection.");
+        s.append("this.");
         if (compiler.isWithMetrics()) s.append("useTimed(this.").append(metricField.getName()).append(", ");
         else s.append("use(");
         /*s.append("new DatabaseCall<Object>() {\r\n");*/
@@ -44,6 +44,11 @@ public class SetterCompiler implements FunctionCompiler
         //
         /*s.append("  }\r\n");*/
         s.append("});\r\n");
+        // clean up the cache
+        if (function.isCacheable())
+        {
+            s.append("this.getAdapterCache().put(p0, ").append(DatabaseAdapterCompiler.tableCacheKey(function.getTable())).append(");\r\n");
+        }
     }
 
 }

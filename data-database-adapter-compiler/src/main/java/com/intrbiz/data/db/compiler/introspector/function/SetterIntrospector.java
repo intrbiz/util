@@ -33,7 +33,7 @@ public class SetterIntrospector implements SQLFunctionIntrospector
         if (setter.table() != method.getParameterTypes()[0]) throw new RuntimeException("The method " + method + " must have a single parameter of type " + setter.table().getCanonicalName() + ".");
         // the table type
         Table table = introspector.buildTable(dialect, setter.table());
-        info.setTable(table);
+        function.setTable(table);
         // create arguments for every column in the table
         int idx = 0;
         for (Column col : table.getColumns())

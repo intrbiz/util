@@ -5,7 +5,6 @@ import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
 import com.intrbiz.data.db.compiler.model.Argument;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Table;
-import com.intrbiz.data.db.compiler.model.function.RemoveInfo;
 import com.intrbiz.data.db.compiler.util.SQLCommand;
 
 public class RemoveGenerator implements SQLFunctionGenerator
@@ -25,8 +24,7 @@ public class RemoveGenerator implements SQLFunctionGenerator
 
     protected void generateDelete(SQLDialect dialect, SQLCommand to, Function function)
     {
-        RemoveInfo info = (RemoveInfo) function.getIntrospectionInformation();
-        Table table = info.getTable();
+        Table table = function.getTable();
         to.write("  DELETE FROM ").writeid(table.getSchema(), table.getName());
         // pkey
         to.write(" WHERE ");

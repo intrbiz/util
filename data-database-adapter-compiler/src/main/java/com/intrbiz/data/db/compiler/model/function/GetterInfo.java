@@ -6,13 +6,10 @@ import java.util.List;
 import java.util.Map;
 
 import com.intrbiz.data.db.compiler.model.Order;
-import com.intrbiz.data.db.compiler.model.Table;
 
 public class GetterInfo
 {
     private boolean parameterised = false;
-
-    private Table table;
 
     private boolean offset = false;
 
@@ -55,16 +52,6 @@ public class GetterInfo
     public void setParameterised(boolean parameterised)
     {
         this.parameterised = parameterised;
-    }
-
-    public Table getTable()
-    {
-        return table;
-    }
-
-    public void setTable(Table table)
-    {
-        this.table = table;
     }
 
     public List<Order> getOrderBy()

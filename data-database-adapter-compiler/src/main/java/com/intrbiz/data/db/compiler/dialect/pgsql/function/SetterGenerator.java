@@ -53,8 +53,7 @@ public class SetterGenerator implements SQLFunctionGenerator
     
     protected void generateInsert(SQLDialect dialect, SQLCommand to, Function function)
     {
-        SetterInfo info = (SetterInfo) function.getIntrospectionInformation();
-        Table table = info.getTable();
+        Table table = function.getTable();
         to.write("  INSERT INTO").writeid(table.getSchema(), table.getName()).write(" (").writeColumnNameList(table.getColumns()).write(")");
         to.write(" VALUES ");
         to.write("(").writeArgumentNameList(function.getArguments()).writeln(");");
@@ -62,8 +61,7 @@ public class SetterGenerator implements SQLFunctionGenerator
     
     protected void generateUpdate(SQLDialect dialect, SQLCommand to, Function function)
     {
-        SetterInfo info = (SetterInfo) function.getIntrospectionInformation();
-        Table table = info.getTable();
+        Table table = function.getTable();
         to.write("  UPDATE ").writeid(table.getSchema(), table.getName());
         // set cols
         to.write(" SET ");

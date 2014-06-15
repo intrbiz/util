@@ -43,7 +43,7 @@ public class GetterIntrospector implements SQLFunctionIntrospector
         Type type = introspector.buildType(dialect, tableCls);
         Table table = introspector.buildTable(dialect, tableCls);
         function.setReturnType(new SQLCompositeType(type, tableCls));
-        info.setTable(table);
+        function.setTable(table);
         // arguments
         Class<?>[] argTypes = method.getParameterTypes();
         Annotation[][] argAnnotations = method.getParameterAnnotations();

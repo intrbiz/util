@@ -26,6 +26,10 @@ public class Function
     private Object introspectionInformation;
     
     private Version since;
+    
+    private boolean cacheable = false;
+    
+    private Table table;
 
     public Function()
     {
@@ -171,5 +175,39 @@ public class Function
         }
         sb.append(")");
         return sb.toString();
+    }
+
+    public boolean isCacheable()
+    {
+        return cacheable;
+    }
+
+    public void setCacheable(boolean cacheable)
+    {
+        this.cacheable = cacheable;
+    }
+
+    public Table getTable()
+    {
+        return table;
+    }
+
+    public void setTable(Table table)
+    {
+        this.table = table;
+    }
+    
+    public boolean isAllArgumentsPrimaryKey()
+    {
+        if (this.getTable() == null) return false;
+        if (this.getTable().getPrimaryKey() == null) return false;
+        if (this.getTable().getPrimaryKey().getColumns().size() != this.getArguments().size()) return false;
+        for (Argument argument : this.getArguments())
+        {
+            Column shadow = argument.getShadowOf();
+            if (shadow == null) return false;
+            if (! this.getTable().getPrimaryKey().getColumns().stream().anyMatch((e) -> {return shadow.equals(e);})) return false; 
+        }
+        return true;
     }
 }

@@ -39,7 +39,7 @@ public class GetterGenerator implements SQLFunctionGenerator
     protected void generateQuery(SQLDialect dialect, SQLCommand to, Function function)
     {
         GetterInfo info = (GetterInfo) function.getIntrospectionInformation();
-        Table table = info.getTable();
+        Table table = function.getTable();
         // build the SQL query
         to.write("SELECT ").writeColumnNameList(table.getColumns()).write(" FROM ").writeid(table.getSchema(), table.getName());
         // where clause
@@ -96,7 +96,7 @@ public class GetterGenerator implements SQLFunctionGenerator
     {
         GetterInfo info = (GetterInfo) function.getIntrospectionInformation();
         SQLCommand to = new SQLCommand();
-        to.write("SELECT ").writeColumnNameList(info.getTable().getColumns()).write(" FROM ").writeid(function.getSchema(), function.getName()).write("(");
+        to.write("SELECT ").writeColumnNameList(function.getTable().getColumns()).write(" FROM ").writeid(function.getSchema(), function.getName()).write("(");
         boolean ns = false;
         for (Argument arg : function.getArguments())
         {
