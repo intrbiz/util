@@ -7,6 +7,8 @@ import java.util.stream.Collectors;
 
 public interface Cache
 {
+    public enum CacheState { ON, OFF, WRITE_ONLY, READ_ONLY }
+    
     /**
      * The name of this cache
      * @return
@@ -260,6 +262,53 @@ public interface Cache
      * @param listener
      */
     default void removeListener(CacheListener listener)
+    {
+    }
+    
+    /**
+     * Enable the cache
+     */
+    default void enable()
+    {
+        this.state(CacheState.ON);
+    }
+    
+    /**
+     * Disable the cache
+     */
+    default void disable()
+    {
+        this.state(CacheState.OFF);
+    }
+    
+    /**
+     * Make the cache read only
+     */
+    default void readOnly()
+    {
+        this.state(CacheState.READ_ONLY);
+    }
+    
+    /**
+     * Make the cache write only
+     */
+    default void writeOnly()
+    {
+        this.state(CacheState.WRITE_ONLY);
+    }
+    
+    /**
+     * Is this cache enabled
+     */
+    default CacheState state()
+    {
+        return CacheState.ON;
+    }
+    
+    /**
+     * Set the state of this cache state
+     */
+    default void state(CacheState state)
     {
     }
 }

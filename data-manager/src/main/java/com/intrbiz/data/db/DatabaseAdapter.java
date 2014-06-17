@@ -9,6 +9,7 @@ import com.intrbiz.data.DataAdapter;
 import com.intrbiz.data.DataException;
 import com.intrbiz.data.Transaction;
 import com.intrbiz.data.cache.Cache;
+import com.intrbiz.data.cache.Cache.CacheState;
 import com.intrbiz.data.db.DatabaseConnection.DatabaseCall;
 import com.yammer.metrics.core.Meter;
 import com.yammer.metrics.core.Timer;
@@ -239,6 +240,36 @@ public abstract class DatabaseAdapter implements DataAdapter
     }
 
     // caching
+    
+    public void cacheOff()
+    {
+        if (this.adapterCache != null) this.adapterCache.disable();
+    }
+    
+    public void cacheOn()
+    {
+        if (this.adapterCache != null) this.adapterCache.enable();
+    }
+    
+    public void cacheReadOnly()
+    {
+        if (this.adapterCache != null) this.adapterCache.readOnly();
+    }
+    
+    public void cacheWriteOnly()
+    {
+        if (this.adapterCache != null) this.adapterCache.writeOnly();
+    }
+    
+    public CacheState cacheState()
+    {
+        return this.adapterCache == null ? CacheState.OFF : this.adapterCache.state();
+    }
+    
+    public void cacheState(CacheState state)
+    {
+        if (this.adapterCache != null) this.adapterCache.state(state);
+    }
 
     public <T> T useCached(String key, Function<T, String> entityKey, DatabaseCall<T> call) throws DataException
     {
