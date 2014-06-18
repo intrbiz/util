@@ -5,15 +5,14 @@ import java.util.function.Function;
 
 import org.apache.log4j.Logger;
 
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.Timer;
 import com.intrbiz.data.DataAdapter;
 import com.intrbiz.data.DataException;
 import com.intrbiz.data.Transaction;
 import com.intrbiz.data.cache.Cache;
 import com.intrbiz.data.cache.Cache.CacheState;
 import com.intrbiz.data.db.DatabaseConnection.DatabaseCall;
-import com.yammer.metrics.core.Meter;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
 
 /**
  * <p>
@@ -228,7 +227,7 @@ public abstract class DatabaseAdapter implements DataAdapter
 
     public <T> T useTimed(Timer timer, DatabaseCall<T> call) throws DataException
     {
-        TimerContext tCtx = timer.time();
+        Timer.Context tCtx = timer.time();
         try
         {
             return connection.use(call);
@@ -300,7 +299,7 @@ public abstract class DatabaseAdapter implements DataAdapter
 
     public <T> T useTimedCached(Timer timer, Meter cacheMiss, String key, Function<T, String> entityKey, DatabaseCall<T> call) throws DataException
     {
-        TimerContext tCtx = timer.time();
+        Timer.Context tCtx = timer.time();
         try
         {
             // check cache
@@ -357,7 +356,7 @@ public abstract class DatabaseAdapter implements DataAdapter
     
     public <T> List<T> useTimedCachedList(Timer timer, Meter cacheMiss, String key, Function<T, String> entityKey, DatabaseCall<List<T>> call) throws DataException
     {
-        TimerContext tCtx = timer.time();
+        Timer.Context tCtx = timer.time();
         try
         {
             // check cache

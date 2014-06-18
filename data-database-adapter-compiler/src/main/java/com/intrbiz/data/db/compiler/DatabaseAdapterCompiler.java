@@ -15,10 +15,11 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.Timer;
 import com.intrbiz.data.DataException;
 import com.intrbiz.data.DataManager;
 import com.intrbiz.data.DataManager.DatabaseAdapterFactory;
-import com.intrbiz.data.cache.Cache;
 import com.intrbiz.data.db.DatabaseAdapter;
 import com.intrbiz.data.db.DatabaseConnection;
 import com.intrbiz.data.db.DatabaseConnection.DatabaseCall;
@@ -46,15 +47,14 @@ import com.intrbiz.data.db.compiler.util.SQLCommand;
 import com.intrbiz.data.db.compiler.util.SQLScript;
 import com.intrbiz.data.db.compiler.util.SQLScriptSet;
 import com.intrbiz.data.db.util.DBUtil;
+import com.intrbiz.gerald.source.IntelligenceSource;
+import com.intrbiz.gerald.witchcraft.Witchcraft;
 import com.intrbiz.util.compiler.CompilerTool;
 import com.intrbiz.util.compiler.model.JavaClass;
 import com.intrbiz.util.compiler.model.JavaField;
 import com.intrbiz.util.compiler.model.JavaMethod;
 import com.intrbiz.util.compiler.model.JavaParameter;
 import com.intrbiz.util.compiler.util.JavaUtil;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Meter;
-import com.yammer.metrics.core.Timer;
 
 public class DatabaseAdapterCompiler
 {
@@ -420,6 +420,13 @@ public class DatabaseAdapterCompiler
         impl.addImport(DataManager.class.getCanonicalName());
         // super class
         impl.setSuperClass(cls.getSimpleName());
+        // metrics intelligence source
+        if (this.isWithMetrics())
+        {
+            impl.addImport(IntelligenceSource.class.getCanonicalName());
+            impl.addImport(Witchcraft.class.getCanonicalName());
+            impl.newField("IntelligenceSource", "intelligenceSource").setValue("Witchcraft.get().source(\"com.intrbiz.data." + JavaUtil.escapeString(schema.getName()) + "\")");
+        }
         // default constructor
         impl.newConstructor(new JavaParameter("DatabaseConnection", "connection")).append("super(connection, DataManager.get().cache(\"cache." + JavaUtil.escapeString(schema.getName()) + "\"));");
         // info functions
@@ -477,18 +484,18 @@ public class DatabaseAdapterCompiler
     {
         method.getJavaClass().addImport(Meter.class.getCanonicalName());
         method.getJavaClass().addImport(Timer.class.getCanonicalName());
-        method.getJavaClass().addImport(Metrics.class.getCanonicalName());
+        method.getJavaClass().addImport(Witchcraft.class.getCanonicalName());
         method.getJavaClass().addImport(TimeUnit.class.getCanonicalName());
-        JavaField metricField = method.getJavaClass().newUniqueField(Timer.class.getSimpleName(), function.getName()).setValue("Metrics.newTimer(" + function.getSchema().getDefinition().getSimpleName() + ".class, \"" + JavaUtil.escapeString(function.getSignature()) + "\", TimeUnit.MICROSECONDS, TimeUnit.SECONDS)");
+        JavaField metricField = method.getJavaClass().newUniqueField(Timer.class.getSimpleName(), function.getName()).setValue("this.intelligenceSource.getRegistry().timer(Witchcraft.name(" + function.getSchema().getDefinition().getSimpleName() + ".class, \"" + JavaUtil.escapeString(function.getSignature()) + "\"))");
         return metricField;
     }
     
     public static JavaField addCacheMissMetricField(JavaMethod method, Function function)
     {
         method.getJavaClass().addImport(Meter.class.getCanonicalName());
-        method.getJavaClass().addImport(Metrics.class.getCanonicalName());
+        method.getJavaClass().addImport(Witchcraft.class.getCanonicalName());
         method.getJavaClass().addImport(TimeUnit.class.getCanonicalName());
-        JavaField metricField = method.getJavaClass().newUniqueField(Meter.class.getSimpleName(), "cache_miss_" + function.getName()).setValue("Metrics.newMeter(" + function.getSchema().getDefinition().getSimpleName() + ".class, \"cache_miss." + JavaUtil.escapeString(function.getSignature()) + "\", \"misses\", TimeUnit.SECONDS)");
+        JavaField metricField = method.getJavaClass().newUniqueField(Meter.class.getSimpleName(), "cache_miss_" + function.getName()).setValue("this.intelligenceSource.getRegistry().meter(Witchcraft.name(" + function.getSchema().getDefinition().getSimpleName() + ".class, \"cache_miss." + JavaUtil.escapeString(function.getSignature()) + "\"))");
         return metricField;
     }
 

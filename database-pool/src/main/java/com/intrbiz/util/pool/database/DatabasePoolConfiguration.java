@@ -11,6 +11,8 @@ import com.intrbiz.configuration.Configuration;
 @XmlRootElement(name="database-pool")
 public class DatabasePoolConfiguration extends Configuration
 {
+    private static final long serialVersionUID = 1L;
+
     private String driver;
     
     private String url;

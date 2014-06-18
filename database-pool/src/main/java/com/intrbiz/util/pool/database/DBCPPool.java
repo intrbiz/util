@@ -9,10 +9,12 @@ import org.apache.commons.pool.KeyedObjectPoolFactory;
 import org.apache.commons.pool.impl.GenericKeyedObjectPoolFactory;
 import org.apache.commons.pool.impl.GenericObjectPool;
 
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
 import com.intrbiz.Util;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Gauge;
+import com.intrbiz.gerald.source.IntelligenceSource;
+import com.intrbiz.gerald.witchcraft.Witchcraft;
+
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class DBCPPool implements DatabasePool
@@ -48,8 +50,7 @@ public class DBCPPool implements DatabasePool
     @Override
     public Connection connect() throws Exception
     {
-        if (this.borrowedConnections != null)
-            this.borrowedConnections.inc();
+        if (this.borrowedConnections != null) this.borrowedConnections.inc();
         return (Connection) this.connectionPool.borrowObject();
     }
 
@@ -86,21 +87,26 @@ public class DBCPPool implements DatabasePool
         this.poolableConnectionFactory = new PoolableConnectionFactory(this.connectionFactory, this.connectionPool, this.statementPool, this.cfg.getValidationSql(), false, true);
         // metrics
         String scope = this.cfg.getUsername() + "@" + this.cfg.getUrl();
-        this.borrowedConnections = Metrics.newCounter(DatabasePool.class, "borrowed-connections", scope);
-        this.activeConnections = Metrics.newGauge(DatabasePool.class, "active-connections", scope, new Gauge<Integer>(){
+        // the source to register on
+        IntelligenceSource source = Witchcraft.get().source("com.intrbiz.util");
+        // setup the metrics
+        this.borrowedConnections = source.getRegistry().counter(Witchcraft.scoped(DatabasePool.class, "borrowed-connections", scope));
+        this.activeConnections = source.getRegistry().register(Witchcraft.scoped(DatabasePool.class, "active-connections", scope), new Gauge<Integer>()
+        {
             @Override
-            public Integer value()
+            public Integer getValue()
             {
                 return connectionPool.getNumActive();
             }
         });
-        this.idleConnections = Metrics.newGauge(DatabasePool.class, "idle-connections", scope, new Gauge<Integer>(){
+        this.idleConnections = source.getRegistry().register(Witchcraft.scoped(DatabasePool.class, "idle-connections", scope), new Gauge<Integer>()
+        {
             @Override
-            public Integer value()
+            public Integer getValue()
             {
                 return connectionPool.getNumIdle();
             }
-        }); 
+        });
     }
 
     @Override

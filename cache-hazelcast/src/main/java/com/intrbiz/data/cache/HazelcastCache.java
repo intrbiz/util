@@ -3,16 +3,15 @@ package com.intrbiz.data.cache;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
 
+import com.codahale.metrics.Timer;
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.EntryListener;
 import com.hazelcast.core.IMap;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
+import com.intrbiz.gerald.source.IntelligenceSource;
+import com.intrbiz.gerald.witchcraft.Witchcraft;
 
 public class HazelcastCache implements Cache
 {
@@ -72,12 +71,14 @@ public class HazelcastCache implements Cache
             }
         };
         this.listenerId = this.cache.addEntryListener(this.listener, true);
+        // the soource to register metrics on
+        IntelligenceSource source = Witchcraft.get().source("com.intrbiz.cache.hazelcast");
         // metrics
-        this.getTimer = Metrics.newTimer(HazelcastCache.class, name + ".get", TimeUnit.MICROSECONDS, TimeUnit.SECONDS);
-        this.putTimer = Metrics.newTimer(HazelcastCache.class, name + ".put", TimeUnit.MICROSECONDS, TimeUnit.SECONDS);
-        this.removeTimer = Metrics.newTimer(HazelcastCache.class, name + ".remove", TimeUnit.MICROSECONDS, TimeUnit.SECONDS);
-        this.keySetTimer = Metrics.newTimer(HazelcastCache.class, name + ".key_set", TimeUnit.MICROSECONDS, TimeUnit.SECONDS);
-        this.containsTimer = Metrics.newTimer(HazelcastCache.class, name + ".contains", TimeUnit.MICROSECONDS, TimeUnit.SECONDS);
+        this.getTimer      = source.getRegistry().timer(Witchcraft.scoped(HazelcastCache.class, "get",      name));
+        this.putTimer      = source.getRegistry().timer(Witchcraft.scoped(HazelcastCache.class, "put",      name));
+        this.removeTimer   = source.getRegistry().timer(Witchcraft.scoped(HazelcastCache.class, "remove",   name));
+        this.keySetTimer   = source.getRegistry().timer(Witchcraft.scoped(HazelcastCache.class, "key_set",  name));
+        this.containsTimer = source.getRegistry().timer(Witchcraft.scoped(HazelcastCache.class, "contains", name));
     }
 
     @Override
@@ -90,7 +91,7 @@ public class HazelcastCache implements Cache
     @SuppressWarnings("unchecked")
     public <T> T get(String key)
     {
-        TimerContext tctx = this.getTimer.time();
+        Timer.Context tctx = this.getTimer.time();
         try
         {
             T entry = (T) this.cache.get(key);
@@ -106,7 +107,7 @@ public class HazelcastCache implements Cache
     @Override
     public <T> void put(String key, T entry)
     {
-        TimerContext tctx = this.putTimer.time();
+        Timer.Context tctx = this.putTimer.time();
         try
         {
             if (logger.isTraceEnabled()) logger.trace("Put: " + key + " => " + entry);
@@ -121,7 +122,7 @@ public class HazelcastCache implements Cache
     @Override
     public void remove(String key)
     {
-        TimerContext tctx = this.removeTimer.time();
+        Timer.Context tctx = this.removeTimer.time();
         try
         {
             if (logger.isTraceEnabled()) logger.trace("Remove: " + key);
@@ -136,7 +137,7 @@ public class HazelcastCache implements Cache
     @Override
     public boolean contains(String key)
     {
-        TimerContext tctx = this.containsTimer.time();
+        Timer.Context tctx = this.containsTimer.time();
         try
         {
             return this.cache.containsKey(key);
@@ -150,7 +151,7 @@ public class HazelcastCache implements Cache
     @Override
     public Set<String> keySet(String keyPrefix)
     {
-        TimerContext tctx = this.keySetTimer.time();
+        Timer.Context tctx = this.keySetTimer.time();
         try
         {
             return this.cache.keySet(new KeyPrefixPredicate(keyPrefix));

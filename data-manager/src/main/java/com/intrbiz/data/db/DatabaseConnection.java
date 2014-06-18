@@ -5,11 +5,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import com.codahale.metrics.Timer;
 import com.intrbiz.data.DataException;
 import com.intrbiz.data.Transaction;
 import com.intrbiz.util.pool.database.DatabasePool;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
 
 public class DatabaseConnection implements AutoCloseable
 {
@@ -229,7 +228,7 @@ public class DatabaseConnection implements AutoCloseable
 
     public <T> T useTimed(final Timer timer, final DatabaseCall<T> call) throws DataException
     {
-        TimerContext tCtx = timer.time();
+        Timer.Context tCtx = timer.time();
         try
         {
             Connection con = this.borrowConnection();
