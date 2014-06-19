@@ -2,6 +2,7 @@ package com.intrbiz.queue.rabbit;
 
 import java.io.IOException;
 
+import com.codahale.metrics.Timer;
 import com.intrbiz.queue.Producer;
 import com.intrbiz.queue.QueueBrokerPool;
 import com.intrbiz.queue.QueueEventTranscoder;
@@ -16,11 +17,14 @@ public abstract class RabbitProducer<T> extends RabbitBase<T> implements Produce
     protected String exchange;
     
     protected RoutingKey defaultKey;
+    
+    protected final Timer publishTimer;
 
-    public RabbitProducer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, RoutingKey defaultKey)
+    public RabbitProducer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, RoutingKey defaultKey, Timer publishTimer)
     {
         super(broker, transcoder);
         this.defaultKey = defaultKey;
+        this.publishTimer = publishTimer;
         this.init();
     }
     
@@ -39,13 +43,21 @@ public abstract class RabbitProducer<T> extends RabbitBase<T> implements Produce
     protected void publish(RoutingKey key, BasicProperties props, byte[] event)
     {
         if (this.closed) throw new QueueException("This producer is closed, cannot publish");
+        Timer.Context ctx = this.publishTimer.time();
         try
         {
-            this.channel.basicPublish(this.exchange, key == null ? null : key.toString(), props, event);
+            try
+            {
+                this.channel.basicPublish(this.exchange, key == null ? null : key.toString(), props, event);
+            }
+            catch (IOException e)
+            {
+                throw new QueueException("Cannot publish event", e);
+            }
         }
-        catch (IOException e)
+        finally
         {
-            throw new QueueException("Cannot publish event", e);
+            ctx.stop();
         }
     }
 

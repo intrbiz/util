@@ -6,6 +6,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.codahale.metrics.Timer;
 import com.intrbiz.queue.Consumer;
 import com.intrbiz.queue.DeliveryHandler;
 import com.intrbiz.queue.QueueBrokerPool;
@@ -28,10 +29,13 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements Consume
     
     protected Set<String> bindings = new HashSet<String>();
     
-    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler)
+    protected final Timer consumeTimer;
+    
+    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Timer consumeTimer)
     {
         super(broker, transcoder);
         this.handler = handler;
+        this.consumeTimer = consumeTimer;
         this.init();
     }
     
@@ -91,12 +95,20 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements Consume
 
     protected void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException
     {
-        // decode the event
-        T event = this.transcoder.decodeFromBytes(body);
-        // handle the event
-        this.handler.handleDevliery(event);
-        // ack the event
-        this.channel.basicAck(envelope.getDeliveryTag(), false);
+        Timer.Context ctx = this.consumeTimer.time();
+        try
+        {
+            // decode the event
+            T event = this.transcoder.decodeFromBytes(body);
+            // handle the event
+            this.handler.handleDevliery(event);
+            // ack the event
+            this.channel.basicAck(envelope.getDeliveryTag(), false);
+        }
+        finally
+        {
+            ctx.stop();
+        }
     }
 
     @Override
