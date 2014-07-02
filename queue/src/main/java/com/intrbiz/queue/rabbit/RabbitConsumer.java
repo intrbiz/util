@@ -1,14 +1,14 @@
 package com.intrbiz.queue.rabbit;
 
 import java.io.IOException;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.log4j.Logger;
 
 import com.codahale.metrics.Timer;
-import com.intrbiz.queue.Consumer;
 import com.intrbiz.queue.DeliveryHandler;
+import com.intrbiz.queue.MultiConsumer;
 import com.intrbiz.queue.QueueBrokerPool;
 import com.intrbiz.queue.QueueEventTranscoder;
 import com.intrbiz.queue.QueueException;
@@ -17,7 +17,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 
-public abstract class RabbitConsumer<T> extends RabbitBase<T> implements Consumer<T>
+public abstract class RabbitConsumer<T> extends RabbitBase<T> implements MultiConsumer<T>
 {
     private Logger logger = Logger.getLogger(RabbitConsumer.class);
 
@@ -25,18 +25,26 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements Consume
 
     protected String queue;
 
-    protected String consumerName;
+    protected String[] consumerNames;
     
-    protected Set<String> bindings = new HashSet<String>();
+    protected Set<String> bindings = new CopyOnWriteArraySet<String>();
     
     protected final Timer consumeTimer;
     
-    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Timer consumeTimer)
+    protected final int threads;
+    
+    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Timer consumeTimer, int threads)
     {
         super(broker, transcoder);
         this.handler = handler;
         this.consumeTimer = consumeTimer;
+        this.threads = threads;
         this.init();
+    }
+    
+    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Timer consumeTimer)
+    {
+        this(broker, transcoder, handler, consumeTimer, 1);
     }
     
     protected abstract String setupQueue(Channel on) throws IOException;
@@ -45,8 +53,12 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements Consume
     {
     }
     
+    protected void removeQueueBinding(Channel on, String binding) throws IOException
+    {
+    }
+    
     @Override
-    public void addBinding(String binding)
+    public synchronized final void addBinding(String binding)
     {
         this.bindings.add(binding);
         try
@@ -59,6 +71,20 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements Consume
         }
     }
     
+    @Override
+    public synchronized final void removeBinding(String binding)
+    {
+        this.bindings.remove(binding);
+        try
+        {
+            this.removeQueueBinding(this.channel, binding);
+        }
+        catch (Exception e)
+        {
+            throw new QueueException("Failed to remove binding", e);
+        }
+    }
+    
     protected void setupBindings() throws IOException
     {
         for (String binding : this.bindings)
@@ -67,7 +93,7 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements Consume
         }
     }
 
-    protected final void setup() throws IOException
+    protected synchronized final void setup() throws IOException
     {
         this.queue = this.setupQueue(this.channel);
         this.setupBindings();
@@ -76,21 +102,25 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements Consume
     
     protected void setupConsumer() throws IOException
     {
-        this.consumerName = this.channel.basicConsume(this.queue, false, new DefaultConsumer(this.channel)
+        this.consumerNames = new String[this.threads];
+        for (int i = 0; i < this.threads; i++)
         {
-            @Override
-            public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException
+            this.consumerNames[i] = this.channel.basicConsume(this.queue, false, new DefaultConsumer(this.channel)
             {
-                try
+                @Override
+                public void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException
                 {
-                    RabbitConsumer.this.handleDelivery(consumerTag, envelope, properties, body);
+                    try
+                    {
+                        RabbitConsumer.this.handleDelivery(consumerTag, envelope, properties, body);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.error("Unhandled error handling delivery", e);
+                    }
                 }
-                catch (Exception e)
-                {
-                    logger.error("Unhandled error handling delivery", e);
-                }
-            }
-        });
+            });
+        }
     }
 
     protected void handleDelivery(String consumerTag, Envelope envelope, BasicProperties properties, byte[] body) throws IOException
@@ -114,7 +144,13 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements Consume
     @Override
     public String name()
     {
-        return this.consumerName;
+        return this.consumerNames[0];
+    }
+    
+    @Override
+    public String[] names()
+    {
+        return this.consumerNames;
     }
 
     @Override
