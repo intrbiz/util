@@ -19,7 +19,7 @@ public class QueueManager
     
     private final ConcurrentMap<String, QueueBrokerPool<?>> brokers = new ConcurrentHashMap<String, QueueBrokerPool<?>>();
     
-    private final ConcurrentMap<Class<? extends QueueAdapter>, QueueAdapterFactory<?,?>> queueAdapters = new ConcurrentHashMap<Class<? extends QueueAdapter>, QueueAdapterFactory<?,?>>();
+    private final ConcurrentMap<Class<? extends QueueAdapter>, QueueAdapterFactory<?>> queueAdapters = new ConcurrentHashMap<Class<? extends QueueAdapter>, QueueAdapterFactory<?>>();
     
     private QueueManager()
     {
@@ -51,7 +51,7 @@ public class QueueManager
     
     // adapters
     
-    public <T extends QueueAdapter, B> void registerQueueAdapter(Class<T> cls, QueueAdapterFactory<T,B> factory)
+    public <T extends QueueAdapter> void registerQueueAdapter(Class<T> cls, QueueAdapterFactory<T> factory)
     {
         this.queueAdapters.put(cls, factory);
     }
@@ -83,8 +83,9 @@ public class QueueManager
         return (T) factory.create(brokerPool);
     }
     
-    public static interface QueueAdapterFactory<T extends QueueAdapter, B>
+    @FunctionalInterface
+    public static interface QueueAdapterFactory<T extends QueueAdapter>
     {
-        T create(QueueBrokerPool<B> broker);
+        T create(QueueBrokerPool<?> broker);
     }
 }
