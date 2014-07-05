@@ -39,7 +39,7 @@ public interface Cache
     {
         CachePointerList pointer = this.get(key);
         if (pointer == null) return null;
-        return pointer.getKeys().stream().map((e) -> {return (T) this.get(e);}).collect(Collectors.toList());
+        return (List<T>) pointer.getKeys().stream().map((e) -> {return this.get(e);}).collect(Collectors.toList());
     }
     
     /**
@@ -77,7 +77,7 @@ public interface Cache
         if (value instanceof CachePointerList)
         {
             // recursively follow
-            return ((CachePointerList) value).getKeys().stream().map((e) -> {return (T) this.getOrFollow(e);}).collect(Collectors.toList());
+            return (List<T>) ((CachePointerList) value).getKeys().stream().map((e) -> {return this.getOrFollow(e);}).collect(Collectors.toList());
         }
         return (List<T>) value;
     }
