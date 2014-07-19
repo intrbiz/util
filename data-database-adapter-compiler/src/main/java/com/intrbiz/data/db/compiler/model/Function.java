@@ -24,11 +24,13 @@ public class Function
     private Annotation functionType;
 
     private Object introspectionInformation;
-    
+
     private Version since;
-    
+
     private boolean cacheable = false;
-    
+
+    private List<String> cacheInvalidate = new LinkedList<String>();
+
     private Table table;
 
     public Function()
@@ -161,7 +163,7 @@ public class Function
     {
         this.since = since;
     }
-    
+
     public String getSignature()
     {
         StringBuilder sb = new StringBuilder();
@@ -187,6 +189,16 @@ public class Function
         this.cacheable = cacheable;
     }
 
+    public List<String> getCacheInvalidate()
+    {
+        return cacheInvalidate;
+    }
+
+    public void setCacheInvalidate(List<String> cacheInvalidate)
+    {
+        this.cacheInvalidate = cacheInvalidate;
+    }
+
     public Table getTable()
     {
         return table;
@@ -196,7 +208,7 @@ public class Function
     {
         this.table = table;
     }
-    
+
     public boolean isAllArgumentsPrimaryKey()
     {
         if (this.getTable() == null) return false;
@@ -206,7 +218,9 @@ public class Function
         {
             Column shadow = argument.getShadowOf();
             if (shadow == null) return false;
-            if (! this.getTable().getPrimaryKey().getColumns().stream().anyMatch((e) -> {return shadow.equals(e);})) return false; 
+            if (!this.getTable().getPrimaryKey().getColumns().stream().anyMatch((e) -> {
+                return shadow.equals(e);
+            })) return false;
         }
         return true;
     }

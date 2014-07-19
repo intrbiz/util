@@ -49,6 +49,28 @@ public class SetterCompiler implements FunctionCompiler
         {
             s.append("this.getAdapterCache().put(p0, ").append(DatabaseAdapterCompiler.tableCacheKey(function.getTable())).append(");\r\n");
         }
+        // invalidate
+        for (final String invalidate : function.getCacheInvalidate())
+        {
+            // prefix?
+            boolean isPrefix = invalidate.endsWith("*");
+            final String expression = isPrefix ? invalidate.substring(0, invalidate.length() - 1) : invalidate;
+            // process the expression
+            String key = DatabaseAdapterCompiler.compileCacheInvalidationExpression(expression, (col) -> {
+                for (Argument arg : function.getArguments())
+                {
+                    if (col.equals(arg.getName()))
+                    {
+                        return "p0." + JavaUtil.getterName(arg.getShadowOf().getDefinition()) + "()";
+                    }
+                }
+                throw new RuntimeException("Could not find column " + col + ", used by cache invalidation key: " + invalidate);
+            });
+            // remove
+            s.append("this.getAdapterCache().remove").append(isPrefix ? "Prefix" : "").append("(").append(key).append(");\r\n");
+        }
     }
+    
+    
 
 }

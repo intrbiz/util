@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.intrbiz.Util;
+import com.intrbiz.data.cache.CacheInvalidate;
 import com.intrbiz.data.cache.Cacheable;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
@@ -164,7 +165,16 @@ public class SQLIntrospector
                 if (introspector != null)
                 {
                     Function function = introspector.buildFunction(this, dialect, method, sqlFunction, cls, schema);
+                    // cache handling
                     function.setCacheable(method.getAnnotation(Cacheable.class) != null);
+                    CacheInvalidate inv = method.getAnnotation(CacheInvalidate.class);
+                    if (inv != null)
+                    {
+                        for (String s : inv.value())
+                        {
+                            function.getCacheInvalidate().add(s);
+                        }
+                    }
                     if (function != null) schema.addFunction(function);
                 }
                 else

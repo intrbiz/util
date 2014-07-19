@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  * 
  * A cache key may end with a '*' to denote it removes all keys that start with it.
  * 
- * A cache key may use ${column_name} to interpolate the value of a column into the key.
+ * A cache key may use #{column_name} to interpolate the value of a column into the key.
  * 
  */
 @Retention(RetentionPolicy.RUNTIME)

@@ -47,6 +47,13 @@ import com.intrbiz.data.db.compiler.util.SQLCommand;
 import com.intrbiz.data.db.compiler.util.SQLScript;
 import com.intrbiz.data.db.compiler.util.SQLScriptSet;
 import com.intrbiz.data.db.util.DBUtil;
+import com.intrbiz.express.DefaultContext;
+import com.intrbiz.express.operator.Add;
+import com.intrbiz.express.operator.Entity;
+import com.intrbiz.express.operator.MethodInvoke;
+import com.intrbiz.express.operator.Operator;
+import com.intrbiz.express.operator.StringLiteral;
+import com.intrbiz.express.value.ValueExpression;
 import com.intrbiz.gerald.source.IntelligenceSource;
 import com.intrbiz.gerald.witchcraft.Witchcraft;
 import com.intrbiz.util.compiler.CompilerTool;
@@ -521,6 +528,52 @@ public class DatabaseAdapterCompiler
             ns = true;
         }
         sb.append("; }");
+        return sb.toString();
+    }
+    
+    public static String compileCacheInvalidationExpression(String expression, java.util.function.Function<String, String> lookupColumn)
+    {
+        return compileCacheInvalidationExpression(new ValueExpression(new DefaultContext(), expression).getOperator(), lookupColumn);
+    }
+    
+    public static String compileCacheInvalidationExpression(Operator op, java.util.function.Function<String, String> lookupColumn)
+    {
+        StringBuilder sb = new StringBuilder();
+        if (op instanceof Add)
+        {
+            Add a = (Add) op;
+            sb.append(compileCacheInvalidationExpression(a.getLeft(), lookupColumn));
+            sb.append(" + ");
+            sb.append(compileCacheInvalidationExpression(a.getRight(), lookupColumn));
+        }
+        else if (op instanceof StringLiteral)
+        {
+            StringLiteral s = (StringLiteral) op;
+            sb.append("\"");
+            sb.append(JavaUtil.escapeString(s.getValue()));
+            sb.append("\"");
+        }
+        else if (op instanceof MethodInvoke)
+        {
+            MethodInvoke m = (MethodInvoke) op;
+            sb.append("this.");
+            sb.append(m.getName());
+            sb.append("(");
+            boolean ns = false;
+            for (Operator a : m.getArguments())
+            {
+                if (ns) sb.append(", ");
+                sb.append(compileCacheInvalidationExpression(a, lookupColumn));
+                ns = true;
+            }
+            sb.append(")");
+        }
+        else if (op instanceof Entity)
+        {
+            Entity e = (Entity) op;
+            sb.append(lookupColumn.apply(e.getValue()));
+        }
+        //
         return sb.toString();
     }
 

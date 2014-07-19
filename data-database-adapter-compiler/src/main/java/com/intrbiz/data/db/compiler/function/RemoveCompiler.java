@@ -76,6 +76,28 @@ public class RemoveCompiler implements FunctionCompiler
                 s.append("this.getAdapterCache().removePrefix(\"").append(JavaUtil.escapeString(function.getTable().getName())).append(".\");\r\n");
             }
         }
+        // invalidate
+        for (final String invalidate : function.getCacheInvalidate())
+        {
+            // prefix?
+            boolean isPrefix = invalidate.endsWith("*");
+            final String expression = isPrefix ? invalidate.substring(0, invalidate.length() - 1) : invalidate;
+            // process the expression
+            String key = DatabaseAdapterCompiler.compileCacheInvalidationExpression(expression, (col) -> {
+                int pidx = 0;
+                for (Argument arg : function.getArguments())
+                {
+                    if (col.equals(arg.getName()))
+                    {
+                        return "p" + pidx;
+                    }
+                    pidx ++;
+                }
+                throw new RuntimeException("Could not find column " + col + ", used by cache invalidation key: " + invalidate);
+            });
+            // remove
+            s.append("this.getAdapterCache().remove").append(isPrefix ? "Prefix" : "").append("(").append(key).append(");\r\n");
+        }
     }
 
     
