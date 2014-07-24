@@ -32,9 +32,18 @@ public class IntrbizBootstrap
         // our working dir
         File workingDir = (new File(".")).getAbsoluteFile().getParentFile();
         System.out.println("Using working directory: " + workingDir.getAbsolutePath());
-        // extract
-        System.out.println("Extracting application");
-        extractJar(jar, workingDir);
+        // optionally extract
+        if (Boolean.parseBoolean(System.getProperty("bootstrap.extract", "true")))
+        {
+            System.out.println("Extracting application");
+            extractJar(jar, workingDir);
+            // only extract do not run
+            if (Boolean.parseBoolean(System.getProperty("bootstrap.extract.only", "false")))
+            {
+                System.out.println("Extracted application");
+                System.exit(0);
+            }
+        }
         // create a class loader
         URLClassLoader classLoader = createClassLoader(workingDir);
         // get the app class
