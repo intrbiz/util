@@ -46,6 +46,8 @@ public class IntrbizBootstrap
         }
         // create a class loader
         URLClassLoader classLoader = createClassLoader(workingDir);
+        // set the context class loader
+        Thread.currentThread().setContextClassLoader(classLoader);
         // get the app class
         String appClassName = getAppClass(jar);
         // load the app class
