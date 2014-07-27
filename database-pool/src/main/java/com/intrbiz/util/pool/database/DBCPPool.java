@@ -1,13 +1,15 @@
 package com.intrbiz.util.pool.database;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 import org.apache.commons.dbcp.ConnectionFactory;
-import org.apache.commons.dbcp.DriverManagerConnectionFactory;
 import org.apache.commons.dbcp.PoolableConnectionFactory;
 import org.apache.commons.pool.KeyedObjectPoolFactory;
 import org.apache.commons.pool.impl.GenericKeyedObjectPoolFactory;
 import org.apache.commons.pool.impl.GenericObjectPool;
+import org.apache.log4j.Logger;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
@@ -34,6 +36,8 @@ public class DBCPPool implements DatabasePool
     protected Gauge<Integer> activeConnections;
     
     protected Gauge<Integer> idleConnections;
+    
+    private Logger logger = Logger.getLogger(DBCPPool.class);
 
     @Override
     public void close()
@@ -61,13 +65,23 @@ public class DBCPPool implements DatabasePool
         // register the driver
         if (! Util.isEmpty(this.cfg.getDriver()))
         {
-            Class.forName(this.cfg.getDriver());
+            logger.debug("Loading JDBC Driver Class: " + this.cfg.getDriver());
+            Class<?> driverClass = Class.forName(this.cfg.getDriver());
+            DriverManager.registerDriver((java.sql.Driver) driverClass.newInstance());
+            logger.debug("Successfully registered JDBC driver");
         }
         // get url, uname, password
         if (Util.isEmpty(this.cfg.getUrl())) throw new NullPointerException("A database URL must be given to configure the pool");
         if (Util.isEmpty(this.cfg.getUsername())) throw new NullPointerException("A database Username must be given to configure the pool");
         // create the connection factory
-        this.connectionFactory = new DriverManagerConnectionFactory(this.cfg.getUrl(), this.cfg.getUsername(), this.cfg.getPassword());
+        this.connectionFactory = new ConnectionFactory() {
+            @Override
+            public Connection createConnection() throws SQLException
+            {
+                logger.trace("Creating new database connection to: " + cfg.getUrl());
+                return DriverManager.getConnection(cfg.getUrl(), cfg.getUsername(), cfg.getPassword());
+            }
+        }; 
         // create an object pool
         this.connectionPool = new GenericObjectPool();
         // idle settings

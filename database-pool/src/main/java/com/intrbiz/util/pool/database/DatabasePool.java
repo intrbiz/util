@@ -10,53 +10,91 @@ public interface DatabasePool extends Configurable<DatabasePoolConfiguration>
     
     void close();
     
-    
     public static final class Default
     {
-        public static DatabasePool create(String url, String username, String password) throws Exception
+        private String driver;
+        
+        private String url;
+        
+        private String username;
+        
+        private String password;
+        
+        private String validationSql;
+        
+        private Default()
         {
-            DatabasePoolConfiguration cfg = new DatabasePoolConfiguration();
-            cfg.setUrl(url);
-            cfg.setUsername(username);
-            cfg.setPassword(password);
-            DatabasePool pool = new DBCPPool();
-            pool.configure(cfg);
-            return pool;
+            super();
         }
         
-        public static DatabasePool create(String url, String username, String password, String validationSql) throws Exception
+        public static final Default with()
         {
-            DatabasePoolConfiguration cfg = new DatabasePoolConfiguration();
-            cfg.setUrl(url);
-            cfg.setUsername(username);
-            cfg.setPassword(password);
-            cfg.setValidationSql(validationSql);
-            DatabasePool pool = new DBCPPool();
-            pool.configure(cfg);
-            return pool;
+            return new Default();
         }
         
-        public static DatabasePool create(Class<?> driver, String url, String username, String password, String validationSql) throws Exception
+        public Default url(String url)
         {
-            DatabasePoolConfiguration cfg = new DatabasePoolConfiguration();
-            cfg.setUrl(url);
-            cfg.setUsername(username);
-            cfg.setPassword(password);
-            cfg.setValidationSql(validationSql);
-            DatabasePool pool = new DBCPPool();
-            pool.configure(cfg);
-            return pool;
+            this.url = url;
+            return this;
         }
         
-        public static DatabasePool create(Class<?> driver, String url, String username, String password) throws Exception
+        public Default username(String username)
         {
-            DatabasePoolConfiguration cfg = new DatabasePoolConfiguration();
-            cfg.setUrl(url);
-            cfg.setUsername(username);
-            cfg.setPassword(password);
+            this.username = username;
+            return this;
+        }
+        
+        public Default password(String password)
+        {
+            this.password = password;
+            return this;
+        }
+        
+        public Default validationSQL(String validationSql)
+        {
+            this.validationSql = validationSql;
+            return this;
+        }
+        
+        public Default driver(String driver)
+        {
+            this.driver = driver;
+            return this;
+        }
+        
+        public Default postgresql()
+        {
+            this.driver = Driver.POSTGRESQL;
+            this.validationSql = ValidationSQL.POSTGRESQL;
+            return this;
+        }
+        
+        public DatabasePoolConfiguration buildConfig()
+        {
+            DatabasePoolConfiguration config = new DatabasePoolConfiguration();
+            config.setDriver(this.driver);
+            config.setValidationSql(this.validationSql);
+            config.setUrl(this.url);
+            config.setUsername(this.username);
+            config.setPassword(this.password);
+            return config;
+        }
+        
+        public DatabasePool build() throws Exception
+        {
             DatabasePool pool = new DBCPPool();
-            pool.configure(cfg);
+            pool.configure(this.buildConfig());
             return pool;
         }
+    }
+    
+    public static final class Driver
+    {
+        public static final String POSTGRESQL = "org.postgresql.Driver";
+    }
+    
+    public static final class ValidationSQL
+    {
+        public static final String POSTGRESQL = "SELECT 1";
     }
 }
