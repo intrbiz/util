@@ -9,9 +9,10 @@ import java.util.Arrays;
 import org.apache.commons.codec.binary.Base64;
 
 import com.intrbiz.crypto.SecretKey;
+import com.intrbiz.util.VarLen;
 
 public class CryptoCookie
-{
+{    
     private final byte[] token;
 
     private final long expiryTime;
@@ -143,7 +144,7 @@ public class CryptoCookie
     /*
      * Layout
      * 
-     * expiry + flags + length(token) + token + + signature
+     * expiry + flags + length(token) + token + signature
      */
 
     public byte[] toBytes()
@@ -152,9 +153,9 @@ public class CryptoCookie
         byte[] data = new byte[len];
         //
         ByteBuffer buffer = ByteBuffer.wrap(data);
-        buffer.putLong(this.expiryTime);
-        buffer.putLong(this.flags);
-        buffer.putInt(this.token.length);
+        VarLen.writeInt64(this.expiryTime, buffer);
+        VarLen.writeInt64(this.flags, buffer);
+        VarLen.writeInt32(this.token.length, buffer);
         buffer.put(this.token);
         if (this.signatue != null) buffer.put(this.signatue);
         //
@@ -163,7 +164,7 @@ public class CryptoCookie
     
     public String toString()
     {
-        return Base64.encodeBase64String(this.toBytes());
+        return Base64.encodeBase64URLSafeString(this.toBytes());
     }
 
     public static CryptoCookie fromBytes(byte[] data) throws IOException
@@ -172,9 +173,9 @@ public class CryptoCookie
         {
             ByteBuffer buffer = ByteBuffer.wrap(data);
             //
-            long expiry = buffer.getLong();
-            long flags = buffer.getLong();
-            int tknLen = buffer.getInt();
+            long expiry = VarLen.readInt64(buffer);
+            long flags = VarLen.readInt64(buffer);
+            int tknLen = VarLen.readInt32(buffer);
             if (tknLen > buffer.remaining()) throw new IOException("Malformed CryptoCookie");
             if (tknLen < 0) throw new IOException("Malformed CryptoCookie");
             int sigLen = buffer.remaining() - tknLen;
@@ -190,12 +191,10 @@ public class CryptoCookie
         }
         catch (IOException e)
         {
-            e.printStackTrace();
             throw e;
         }
         catch (Exception e)
         {
-            e.printStackTrace();
             throw new IOException("Malformed CryptoCookie", e);
         }
     }
@@ -214,7 +213,7 @@ public class CryptoCookie
 
     private int dataLength()
     {
-        return 8 + 8 + 4 + this.token.length;
+        return VarLen.lenInt64(this.expiryTime) + VarLen.lenInt64(this.flags) + VarLen.lenInt32(this.token.length) + this.token.length;
     }
 
     private byte[] packData()
@@ -223,9 +222,9 @@ public class CryptoCookie
         byte[] data = new byte[len];
         //
         ByteBuffer buffer = ByteBuffer.wrap(data);
-        buffer.putLong(this.expiryTime);
-        buffer.putLong(this.flags);
-        buffer.putInt(this.token.length);
+        VarLen.writeInt64(this.expiryTime, buffer);
+        VarLen.writeInt64(this.flags, buffer);
+        VarLen.writeInt32(this.token.length, buffer);
         buffer.put(this.token);
         //
         return data;
