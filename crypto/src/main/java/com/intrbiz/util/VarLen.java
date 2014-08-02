@@ -55,4 +55,32 @@ public class VarLen
         }
         while (value > 0);
     }
+    
+    public static final int lenInt32(int value)
+    {
+        int len = 0 ;
+        do
+        {
+            int b = (int) (value & 0x7F);
+            value = value >>> 7;
+            if (value > 0) b = b | 0x80;
+            len++;
+        }
+        while (value > 0);
+        return len;
+    }
+    
+    public static final int lenInt64(long value)
+    {
+        int len = 0;
+        do
+        {
+            int b = (int) (value & 0x7F);
+            value = value >>> 7;
+            if (value > 0) b = b | 0x80;
+            len++;
+        }
+        while (value > 0);
+        return len;
+    }
 }
