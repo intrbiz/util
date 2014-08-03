@@ -11,6 +11,16 @@ import org.apache.commons.codec.binary.Base64;
 import com.intrbiz.crypto.SecretKey;
 import com.intrbiz.util.VarLen;
 
+/**
+ * <p>
+ * A CryptoCookie is a cryptographically signed 
+ * token with additional metadata.  This allows 
+ * for the stateless verification of tokens.
+ * </p>
+ * <p>
+ * You should use a CookieBaker to bake CryptoCookies
+ * </p>
+ */
 public class CryptoCookie
 {    
     private final byte[] token;
@@ -185,11 +195,13 @@ public class CryptoCookie
         return this.verifySignature(key) && this.isActive();
     }
 
-    /*
-     * Layout: data + signature
+    /**
+     * Serialise this CryptoCookie to its bianry form
+     * @return
      */
     public byte[] toBytes()
     {
+        // Layout: data + signature
         byte[] data = this.packData();
         ByteBuffer buffer = ByteBuffer.allocate(data.length + (this.signatue == null ? 0 : this.signatue.length));
         buffer.put(data);
@@ -200,11 +212,20 @@ public class CryptoCookie
         return cookie;
     }
     
+    /**
+     * Serialise this CryptoCookie to a URL safe Base64 encoded form
+     */
     public String toString()
     {
         return Base64.encodeBase64URLSafeString(this.toBytes());
     }
 
+    /**
+     * Decode a CryptoCookie from its binary form
+     * @param data the binary form
+     * @return the decoded CryptoCookie
+     * @throws IOException if the serialised form is malformed
+     */
     public static CryptoCookie fromBytes(byte[] data) throws IOException
     {
         try
@@ -242,16 +263,21 @@ public class CryptoCookie
         }
     }
     
+    /**
+     * Decode a CryptoCookie from its Base64 encoded string representation
+     * @param data the Base64 encoded string format of the cookie
+     * @return the decoded CryptoCookie
+     * @throws IOException if the serialised form is malformed
+     */
     public static CryptoCookie fromString(String data) throws IOException
     {
         return fromBytes(Base64.decodeBase64(data));
     }
 
-    /*
-     * Layout: varLen64(expiry) + varLen32(extended) + varLen64(flags) + varLen32(token.length) + token
-     */
+
     private byte[] packData()
     {
+        // Layout: varLen64(expiry) + varLen32(rebaked) + varLen64(flags) + varLen32(token.length) + token
         ByteBuffer buffer = ByteBuffer.allocate(24 + this.token.length);
         VarLen.writeInt64(this.expiryTime, buffer);
         VarLen.writeInt32(this.rebaked, buffer);
