@@ -7,7 +7,7 @@ import com.intrbiz.crypto.SecretKey;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
-public class SecretKeyTests
+public class TestSecretKey
 {
     @Test
     public void defaultGenerateKey()

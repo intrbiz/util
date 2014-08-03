@@ -12,7 +12,7 @@ import static org.hamcrest.Matchers.*;
 
 import static org.junit.Assert.*;
 
-public class CryptoCookieTests
+public class TestCryptoCookie
 {
     public static final byte[] TOKEN = { 1, 2, 3, 4, 5, 6, 7, 8 };
     
