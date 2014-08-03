@@ -29,6 +29,7 @@ public class CryptoCookieTests
         assertThat(cookie.getSignatue(), is(nullValue()));
         assertThat(cookie.getFlags(), is(equalTo(0L)));
         assertThat(cookie.getExpiryTime(), is(equalTo(expiresAt)));
+        assertThat(cookie.getRebaked(), is(equalTo(0)));
         assertThat(cookie.getToken(), is(equalTo(TOKEN)));
         assertThat(cookie.toBytes(), is(notNullValue()));
         assertThat(cookie.toString(), is(notNullValue()));
@@ -45,6 +46,7 @@ public class CryptoCookieTests
         assertThat(cookie.getSignatue(), is(nullValue()));
         assertThat(cookie.getFlags(), is(equalTo(0L)));
         assertThat(cookie.getExpiryTime(), is(equalTo(expiresAt)));
+        assertThat(cookie.getRebaked(), is(equalTo(0)));
         assertThat(cookie.getToken(), is(equalTo(TOKEN)));
         assertThat(cookie.toBytes(), is(notNullValue()));
         assertThat(cookie.toString(), is(notNullValue()));
@@ -67,6 +69,7 @@ public class CryptoCookieTests
         assertThat(cookie.getSignatue(), is(nullValue()));
         assertThat(cookie.getFlags(), is(equalTo(0L)));
         assertThat(cookie.getExpiryTime(), is(equalTo(expiresAt)));
+        assertThat(cookie.getRebaked(), is(equalTo(0)));
         assertThat(cookie.getToken(), is(equalTo(TOKEN)));
         assertThat(cookie.toBytes(), is(notNullValue()));
         assertThat(cookie.toString(), is(notNullValue()));
@@ -89,6 +92,7 @@ public class CryptoCookieTests
             assertThat(decoded.getSignatue(), is(notNullValue()));
             assertThat(decoded.getFlags(), is(equalTo(0L)));
             assertThat(decoded.getExpiryTime(), is(equalTo(expiresAt)));
+            assertThat(cookie.getRebaked(), is(equalTo(0)));
             assertThat(decoded.getToken(), is(equalTo(TOKEN)));
             assertThat(decoded.toBytes(), is(notNullValue()));
             assertThat(decoded.toString(), is(notNullValue()));    
@@ -110,6 +114,7 @@ public class CryptoCookieTests
         assertThat(cookie.getSignatue(), is(nullValue()));
         assertThat(cookie.getFlags(), is(equalTo(0L)));
         assertThat(cookie.getExpiryTime(), is(equalTo(expiresAt)));
+        assertThat(cookie.getRebaked(), is(equalTo(0)));
         assertThat(cookie.getToken(), is(equalTo(TOKEN)));
         assertThat(cookie.toBytes(), is(notNullValue()));
         assertThat(cookie.toString(), is(notNullValue()));

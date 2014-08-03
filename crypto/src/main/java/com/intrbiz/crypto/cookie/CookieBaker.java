@@ -111,7 +111,7 @@ public class CookieBaker
         return f;
     }
     
-    protected CryptoCookie bake(byte[] token, long expiresAt, long flags)
+    protected CryptoCookie bake(byte[] token, long expiresAt, int extended, long flags)
     {
         CryptoCookie cc = new CryptoCookie(expiresAt, flags, token);
         cc.sign(this.key);
@@ -122,54 +122,59 @@ public class CookieBaker
     
     public CryptoCookie bake()
     {
-        return this.bake(generateToken(), expiresAt(), flags(this.flags));
+        return this.bake(generateToken(), expiresAt(), 0, flags(this.flags));
     }
     
     public CryptoCookie bake(long expiryTime)
     {
-        return this.bake(generateToken(), expiryTime, flags(this.flags));
+        return this.bake(generateToken(), expiryTime, 0, flags(this.flags));
     }
     
     public CryptoCookie bake(Flag... flags)
     {
-        return this.bake(generateToken(), expiresAt(), flags(flags));
+        return this.bake(generateToken(), expiresAt(), 0, flags(flags));
     }
     
     public CryptoCookie bake(long expiryTime, Flag... flags)
     {
-        return this.bake(generateToken(), expiryTime, flags(flags));
+        return this.bake(generateToken(), expiryTime, 0, flags(flags));
     }
     
     public CryptoCookie bake(byte[] token)
     {
-        return this.bake(token, expiresAt(), flags(this.flags));
+        return this.bake(token, expiresAt(), 0, flags(this.flags));
     }
     
     public CryptoCookie bake(byte[] token, Flag... flags)
     {
-        return this.bake(token, expiresAt(), flags(flags));
+        return this.bake(token, expiresAt(), 0, flags(flags));
     }
     
     public CryptoCookie bake(byte[] token, long expiryTime, Flag... flags)
     {
-        return this.bake(token, expiryTime, flags(flags));
+        return this.bake(token, expiryTime, 0, flags(flags));
+    }
+    
+    public CryptoCookie bake(byte[] token, long expiryTime, int extended, Flag... flags)
+    {
+        return this.bake(token, expiryTime, extended, flags(flags));
     }
     
     //
     
     public CryptoCookie rebake(CryptoCookie cookie)
     {
-        return this.bake(cookie.getToken(), expiresAt(), flags(this.flags));
+        return this.bake(cookie.getToken(), expiresAt(), cookie.getRebaked() + 1, flags(this.flags));
     }
     
     public CryptoCookie rebake(CryptoCookie cookie, Flag... flags)
     {
-        return this.bake(cookie.getToken(), expiresAt(), flags(flags));
+        return this.bake(cookie.getToken(), expiresAt(), cookie.getRebaked() + 1, flags(flags));
     }
     
     public CryptoCookie rebake(CryptoCookie cookie, long expiryTime, Flag... flags)
     {
-        return this.bake(cookie.getToken(), expiryTime, flags(flags));
+        return this.bake(cookie.getToken(), expiryTime, cookie.getRebaked() + 1, flags(flags));
     }
     
     //

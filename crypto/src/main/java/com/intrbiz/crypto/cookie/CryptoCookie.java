@@ -16,36 +16,64 @@ public class CryptoCookie
     private final byte[] token;
 
     private final long expiryTime;
+    
+    private final int rebaked;
 
     private final long flags;
 
     private byte[] signatue;
 
-    public CryptoCookie(long expiryTime, long flags, byte[] token)
+    public CryptoCookie(long expiryTime, int rebaked, long flags, byte[] token)
     {
         super();
         //
         if (token == null) token = new byte[0];
         //
         this.expiryTime = expiryTime;
+        this.rebaked = rebaked;
         this.flags = flags;
         this.token = token;
     }
 
-    public CryptoCookie(long expiryTime, long flags, byte[] token, byte[] signature)
+    public CryptoCookie(long expiryTime, int rebaked, long flags, byte[] token, byte[] signature)
     {
-        this(expiryTime, flags, token);
+        this(expiryTime, rebaked, flags, token);
         this.signatue = signature;
     }
+    
+    public CryptoCookie(long expiryTime, long flags, byte[] token, byte[] signature)
+    {
+        this(expiryTime, 0, flags, token);
+        this.signatue = signature;
+    }
+    
+    public CryptoCookie(long expiryTime, long flags, byte[] token)
+    {
+        this(expiryTime, 0, flags, token);
+    }
 
+    /**
+     * The token
+     */
     public byte[] getToken()
     {
         return token;
     }
 
+    /**
+     * When does this cookie expire (in System.currentTimeMillis())
+     */
     public long getExpiryTime()
     {
         return expiryTime;
+    }
+    
+    /**
+     * How many times was this cookie rebaked
+     */
+    public int getRebaked()
+    {
+        return this.rebaked;
     }
 
     /**
@@ -78,16 +106,29 @@ public class CryptoCookie
         return this.expiryTime < 0 || this.expiryTime >= System.currentTimeMillis();
     }
 
+    /**
+     * Flags
+     */
     public long getFlags()
     {
         return flags;
     }
 
+    /**
+     * Is the given flag set
+     * @param flag the flag to test for
+     * @return true if the flag is set
+     */
     public boolean isFlagSet(Flag flag)
     {
         return (this.flags & flag.mask) != 0;
     }
 
+    /**
+     * Are all the given flags set
+     * @param flags the flags to test for
+     * @return true if all flags are set
+     */
     public boolean isFlagsSet(Flag... flags)
     {
         for (Flag flag : flags)
@@ -97,6 +138,9 @@ public class CryptoCookie
         return true;
     }
 
+    /**
+     * Get the signature
+     */
     public byte[] getSignatue()
     {
         return signatue;
@@ -142,24 +186,18 @@ public class CryptoCookie
     }
 
     /*
-     * Layout
-     * 
-     * expiry + flags + length(token) + token + signature
+     * Layout: data + signature
      */
-
     public byte[] toBytes()
     {
-        int len = this.length();
-        byte[] data = new byte[len];
-        //
-        ByteBuffer buffer = ByteBuffer.wrap(data);
-        VarLen.writeInt64(this.expiryTime, buffer);
-        VarLen.writeInt64(this.flags, buffer);
-        VarLen.writeInt32(this.token.length, buffer);
-        buffer.put(this.token);
+        byte[] data = this.packData();
+        ByteBuffer buffer = ByteBuffer.allocate(data.length + (this.signatue == null ? 0 : this.signatue.length));
+        buffer.put(data);
         if (this.signatue != null) buffer.put(this.signatue);
-        //
-        return data;
+        buffer.flip();
+        byte[] cookie = new byte[buffer.limit()];
+        buffer.get(cookie);
+        return cookie;
     }
     
     public String toString()
@@ -172,22 +210,27 @@ public class CryptoCookie
         try
         {
             ByteBuffer buffer = ByteBuffer.wrap(data);
-            //
-            long expiry = VarLen.readInt64(buffer);
-            long flags = VarLen.readInt64(buffer);
-            int tknLen = VarLen.readInt32(buffer);
+            // read header
+            long expiry  = VarLen.readInt64(buffer);
+            int rebaked = VarLen.readInt32(buffer);
+            long flags   = VarLen.readInt64(buffer);
+            int tknLen   = VarLen.readInt32(buffer);
+            // validate token length
             if (tknLen > buffer.remaining()) throw new IOException("Malformed CryptoCookie");
             if (tknLen < 0) throw new IOException("Malformed CryptoCookie");
+            // compute signature length
             int sigLen = buffer.remaining() - tknLen;
+            // validate signature length
             if (sigLen < 0) throw new IOException("Malformed CryptoCookie");
             if (sigLen == 0) throw new IOException("Unsigned CryptoCookie");
-            //
+            // read token
             byte[] token = new byte[tknLen];
             buffer.get(token);
+            // read signature
             byte[] sig = new byte[sigLen];
             buffer.get(sig);
-            //
-            return new CryptoCookie(expiry, flags, token, sig);
+            // create
+            return new CryptoCookie(expiry, rebaked, flags, token, sig);
         }
         catch (IOException e)
         {
@@ -204,29 +247,20 @@ public class CryptoCookie
         return fromBytes(Base64.decodeBase64(data));
     }
 
-    // util
-
-    private int length()
-    {
-        return this.dataLength() + (this.signatue == null ? 0 : this.signatue.length);
-    }
-
-    private int dataLength()
-    {
-        return VarLen.lenInt64(this.expiryTime) + VarLen.lenInt64(this.flags) + VarLen.lenInt32(this.token.length) + this.token.length;
-    }
-
+    /*
+     * Layout: varLen64(expiry) + varLen32(extended) + varLen64(flags) + varLen32(token.length) + token
+     */
     private byte[] packData()
     {
-        int len = this.dataLength();
-        byte[] data = new byte[len];
-        //
-        ByteBuffer buffer = ByteBuffer.wrap(data);
+        ByteBuffer buffer = ByteBuffer.allocate(24 + this.token.length);
         VarLen.writeInt64(this.expiryTime, buffer);
+        VarLen.writeInt32(this.rebaked, buffer);
         VarLen.writeInt64(this.flags, buffer);
         VarLen.writeInt32(this.token.length, buffer);
         buffer.put(this.token);
-        //
+        buffer.flip();
+        byte[] data = new byte[buffer.limit()];
+        buffer.get(data);
         return data;
     }
 
