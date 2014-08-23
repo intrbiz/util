@@ -25,6 +25,22 @@ import javax.script.ScriptEngineManager;
  */
 public class RestrictedScriptManager extends ScriptEngineManager
 {
+    static
+    {
+        // ensure the Java security manager is loaded
+        try
+        {
+            if (System.getSecurityManager() == null)
+            {
+                System.setSecurityManager(new SecurityManager());
+            }
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException("Failed to load the Java Security Manager!", e);
+        }
+    }
+    
     private final ScriptEngineManager manager;
     
     private final CodeSource source;
