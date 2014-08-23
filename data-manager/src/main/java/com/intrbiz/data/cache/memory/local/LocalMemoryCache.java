@@ -73,10 +73,17 @@ public class LocalMemoryCache implements Cache
         }).collect(Collectors.toSet());
     }
 
+    @Override
     public void close()
     {
         this.cache.clear();
         this.listeners.clear();
+    }
+    
+    @Override
+    public void clear()
+    {
+        this.cache.clear();
     }
 
     @Override

@@ -117,6 +117,12 @@ public class SharedMemoryCache implements Cache
         this.listeners.remove(listener);
     }
     
+    @Override
+    public void clear()
+    {
+        this.cache.clear();
+    }
+    
     protected void fireRemoval(String key, Object entry)
     {
         for (CacheListener listener : this.listeners.keySet())
