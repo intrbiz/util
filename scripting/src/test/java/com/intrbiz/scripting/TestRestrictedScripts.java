@@ -31,7 +31,7 @@ public class TestRestrictedScripts
     @Test
     public void testPreventExit()
     {
-        ScriptEngineManager manager = new RestrictedScriptManager();
+        ScriptEngineManager manager = new RestrictedScriptEngineManager();
         ScriptEngine engine = manager.getEngineByName("nashorn");
         try
         {
@@ -47,7 +47,7 @@ public class TestRestrictedScripts
     @Test
     public void testSetProperty()
     {
-        ScriptEngineManager manager = new RestrictedScriptManager();
+        ScriptEngineManager manager = new RestrictedScriptEngineManager();
         ScriptEngine engine = manager.getEngineByName("nashorn");
         try
         {
@@ -63,7 +63,7 @@ public class TestRestrictedScripts
     @Test
     public void testListDirectory()
     {
-        ScriptEngineManager manager = new RestrictedScriptManager();
+        ScriptEngineManager manager = new RestrictedScriptEngineManager();
         ScriptEngine engine = manager.getEngineByName("nashorn");
         try
         {
@@ -81,7 +81,7 @@ public class TestRestrictedScripts
     @Test
     public void testOpenSocket()
     {
-        ScriptEngineManager manager = new RestrictedScriptManager();
+        ScriptEngineManager manager = new RestrictedScriptEngineManager();
         ScriptEngine engine = manager.getEngineByName("nashorn");
         try
         {

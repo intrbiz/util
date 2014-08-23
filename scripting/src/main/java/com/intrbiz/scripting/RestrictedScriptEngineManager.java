@@ -23,7 +23,7 @@ import javax.script.ScriptEngineManager;
  * ScriptEngines with a restricted Java Security Policy.
  * 
  */
-public class RestrictedScriptManager extends ScriptEngineManager
+public class RestrictedScriptEngineManager extends ScriptEngineManager
 {
     static
     {
@@ -51,7 +51,7 @@ public class RestrictedScriptManager extends ScriptEngineManager
     
     private final AccessControlContext context;
     
-    public RestrictedScriptManager(CodeSource source, PermissionCollection permissions)
+    public RestrictedScriptEngineManager(CodeSource source, PermissionCollection permissions)
     {
         super();
         this.manager = new ScriptEngineManager();
@@ -61,12 +61,12 @@ public class RestrictedScriptManager extends ScriptEngineManager
         this.context = new AccessControlContext(new ProtectionDomain[] { this.domain });
     }
     
-    public RestrictedScriptManager(PermissionCollection permissions)
+    public RestrictedScriptEngineManager(PermissionCollection permissions)
     {
         this(new CodeSource(null, (CodeSigner[]) null), permissions);
     }
     
-    public RestrictedScriptManager()
+    public RestrictedScriptEngineManager()
     {
         this(new RestrictedScriptPermissions());
     }
