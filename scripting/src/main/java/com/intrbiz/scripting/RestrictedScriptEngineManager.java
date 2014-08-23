@@ -22,25 +22,11 @@ import javax.script.ScriptEngineManager;
  * This is designed to be a drop in replacement for ScriptManager which will execute 
  * ScriptEngines with a restricted Java Security Policy.
  * 
+ * Note: You need to ensure that a Java Security Manager is loaded and in effect.
+ * 
  */
 public class RestrictedScriptEngineManager extends ScriptEngineManager
-{
-    static
-    {
-        // ensure the Java security manager is loaded
-        try
-        {
-            if (System.getSecurityManager() == null)
-            {
-                System.setSecurityManager(new SecurityManager());
-            }
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException("Failed to load the Java Security Manager!", e);
-        }
-    }
-    
+{    
     private final ScriptEngineManager manager;
     
     private final CodeSource source;
@@ -57,6 +43,7 @@ public class RestrictedScriptEngineManager extends ScriptEngineManager
         this.manager = new ScriptEngineManager();
         this.source = source;
         this.permissions = permissions;
+        // setup access control context
         this.domain = new ProtectionDomain(this.source, this.permissions);
         this.context = new AccessControlContext(new ProtectionDomain[] { this.domain });
     }
