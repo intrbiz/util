@@ -103,7 +103,8 @@ public class RestrictedScriptManager extends ScriptEngineManager
             @Override
             public ScriptEngine run()
             {
-                return new RestrictedScriptEngine(manager.getEngineByName(shortName), context);
+                ScriptEngine engine = manager.getEngineByName(shortName);
+                return engine == null ? null : new RestrictedScriptEngine(engine, context);
             }
         }, 
         this.context);
@@ -117,7 +118,8 @@ public class RestrictedScriptManager extends ScriptEngineManager
             @Override
             public ScriptEngine run()
             {
-                return new RestrictedScriptEngine(manager.getEngineByExtension(extension), context);
+                ScriptEngine engine = manager.getEngineByExtension(extension);
+                return engine == null ? null : new RestrictedScriptEngine(engine, context);
             }
         }, 
         this.context);
@@ -132,7 +134,8 @@ public class RestrictedScriptManager extends ScriptEngineManager
             @Override
             public ScriptEngine run()
             {
-                return new RestrictedScriptEngine(manager.getEngineByMimeType(mimeType), context);
+                ScriptEngine engine = manager.getEngineByMimeType(mimeType);
+                return engine == null ? null : new RestrictedScriptEngine(engine, context);
             }
         }, 
         this.context);

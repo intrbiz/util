@@ -95,7 +95,8 @@ public class RestrictedScriptEngineFactory implements ScriptEngineFactory
             @Override
             public ScriptEngine run()
             {
-                return new RestrictedScriptEngine(factory.getScriptEngine(), context);
+                ScriptEngine engine = factory.getScriptEngine();
+                return engine == null ? null : new RestrictedScriptEngine(engine, context);
             }
         }, 
         this.context);
