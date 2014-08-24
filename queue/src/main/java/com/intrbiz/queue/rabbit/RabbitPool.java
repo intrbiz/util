@@ -27,7 +27,7 @@ public class RabbitPool implements QueueBrokerPool<Channel>
     
     private ExecutorService executor;
 
-    public RabbitPool(String uri)
+    public RabbitPool(String uri, String username, String password)
     {
         try
         {
@@ -42,7 +42,10 @@ public class RabbitPool implements QueueBrokerPool<Channel>
             });
             //
             this.factory = new ConnectionFactory();
+            this.factory.setConnectionTimeout(5000);
             this.factory.setUri(uri);
+            if (username != null) this.factory.setUsername(username);
+            if (password != null) this.factory.setPassword(password);
         }
         catch (KeyManagementException e)
         {
@@ -56,6 +59,11 @@ public class RabbitPool implements QueueBrokerPool<Channel>
         {
             throw new QueueException("Cannot init connection factory", e);
         }
+    }
+    
+    public RabbitPool(String uri)
+    {
+        this(uri, null, null);
     }
 
     @Override
