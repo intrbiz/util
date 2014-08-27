@@ -22,25 +22,32 @@ import java.util.jar.Manifest;
  */
 public class IntrbizBootstrap
 {
+    public static boolean DEBUG = Boolean.getBoolean("bootstrap.debug");
+    
+    public static void log(String message)
+    {
+        if (DEBUG) System.out.println(message);
+    }
+    
     public static void main(String[] args) throws Exception
     {
-        System.out.println("Intrbiz Bootstrap Starting");
+        log("Intrbiz Bootstrap Starting");
         // get our jar
         URL jar = findJar();
         if (jar == null) throw new RuntimeException("Failed to find JAR location");
-        System.out.println("Using Jar: " + jar);
+        log("Using Jar: " + jar);
         // our working dir
         File workingDir = (new File(".")).getAbsoluteFile().getParentFile();
-        System.out.println("Using working directory: " + workingDir.getAbsolutePath());
+        log("Using working directory: " + workingDir.getAbsolutePath());
         // optionally extract
         if (Boolean.parseBoolean(System.getProperty("bootstrap.extract", "true")))
         {
-            System.out.println("Extracting application");
+            log("Extracting application");
             extractJar(jar, workingDir);
             // only extract do not run
             if (Boolean.parseBoolean(System.getProperty("bootstrap.extract.only", "false")))
             {
-                System.out.println("Extracted application");
+                log("Extracted application");
                 System.exit(0);
             }
         }
@@ -54,13 +61,13 @@ public class IntrbizBootstrap
         Class<?> appClass = classLoader.loadClass(appClassName);
         if (appClass == null)
         {
-            System.out.println("Failed to load class: " + appClassName);
+            log("Failed to load class: " + appClassName);
             System.exit(-1);
         }
         Method main = appClass.getDeclaredMethod("main", String[].class);
         if (main == null || (! Modifier.isStatic(main.getModifiers())))
         {
-            System.out.println("Could not find main method on class: " + appClass);
+            log("Could not find main method on class: " + appClass);
             System.exit(-1);
         }
         main.invoke(null, new Object[] { args });
