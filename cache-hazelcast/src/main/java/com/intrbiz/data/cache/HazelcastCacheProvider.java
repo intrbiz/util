@@ -46,12 +46,12 @@ public class HazelcastCacheProvider implements CacheProvider
                     // setup the default configuration
                     config = new Config();
                     // add update configuration for our maps
-                    MapConfig sessionMapConfig = config.getMapConfig("intrbiz.cache.*");
+                    MapConfig cacheMapConfig = config.getMapConfig("intrbiz.cache.*");
                     // add default config for cache maps
-                    sessionMapConfig.setMaxIdleSeconds(3600);
-                    sessionMapConfig.setEvictionPolicy(EvictionPolicy.LRU);
-                    sessionMapConfig.setEvictionPercentage(25);
-                    config.addMapConfig(sessionMapConfig);
+                    cacheMapConfig.setMaxIdleSeconds(3600);
+                    cacheMapConfig.setEvictionPolicy(EvictionPolicy.LRU);
+                    cacheMapConfig.setEvictionPercentage(25);
+                    config.addMapConfig(cacheMapConfig);
                 }
             }
             // create the hazel cast instance
