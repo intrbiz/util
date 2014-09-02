@@ -11,8 +11,6 @@ import com.intrbiz.data.DataManager.CacheProvider;
 
 public class HazelcastCacheProvider implements CacheProvider
 {
-    private Config hazelcastConfig;
-
     private HazelcastInstance hazelcastInstance;
 
     public HazelcastCacheProvider(HazelcastInstance hazelcastInstance)
@@ -40,37 +38,33 @@ public class HazelcastCacheProvider implements CacheProvider
                 String hazelcastConfigFile = System.getProperty("hazelcast.config");
                 if (hazelcastConfigFile != null)
                 {
-                    // when using a config file, you must configure the balsa.sessions map
-                    this.hazelcastConfig = new XmlConfigBuilder(hazelcastConfigFile).build();
+                    // when using a config file, you should configure the intrbiz.cache. maps
+                    config = new XmlConfigBuilder(hazelcastConfigFile).build();
                 }
                 else
                 {
                     // setup the default configuration
-                    this.hazelcastConfig = new Config();
+                    config = new Config();
                     // add update configuration for our maps
-                    MapConfig sessionMapConfig = this.hazelcastConfig.getMapConfig("intrbiz.cache.*");
-                    // session lifetime is in minutes
+                    MapConfig sessionMapConfig = config.getMapConfig("intrbiz.cache.*");
+                    // add default config for cache maps
                     sessionMapConfig.setMaxIdleSeconds(3600);
                     sessionMapConfig.setEvictionPolicy(EvictionPolicy.LRU);
                     sessionMapConfig.setEvictionPercentage(25);
-                    this.hazelcastConfig.addMapConfig(sessionMapConfig);
+                    config.addMapConfig(sessionMapConfig);
                 }
-            }
-            else
-            {
-                this.hazelcastConfig = config;
             }
             // create the hazel cast instance
             if (instanceName == null)
             {
-                this.hazelcastInstance = Hazelcast.newHazelcastInstance(this.hazelcastConfig);
+                this.hazelcastInstance = Hazelcast.newHazelcastInstance(config);
             }
             else
             {
                 // set the instance name
-                this.hazelcastConfig.setInstanceName(instanceName);
+                config.setInstanceName(instanceName);
                 // create the instance
-                this.hazelcastInstance = Hazelcast.getOrCreateHazelcastInstance(this.hazelcastConfig);
+                this.hazelcastInstance = Hazelcast.getOrCreateHazelcastInstance(config);
             }
         }
         catch (Exception e)
