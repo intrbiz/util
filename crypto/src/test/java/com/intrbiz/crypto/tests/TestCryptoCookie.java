@@ -133,4 +133,19 @@ public class TestCryptoCookie
             assertTrue(true);
         }
     }
+    
+    @Test
+    public void verifyCookie()
+    {
+        // the cookie
+        long expiresAt = System.currentTimeMillis() + 3600000;
+        CryptoCookie cookie = new CryptoCookie(expiresAt, 0, TOKEN);
+        cookie.sign(KEY);
+        // test verify
+        assertThat(cookie.verifySignature(KEY), is(equalTo(true)));
+        assertThat(cookie.verify(KEY), is(equalTo(true)));
+        // test does not varify with random key
+        assertThat(cookie.verifySignature(SecretKey.generate()), is(equalTo(false)));
+        assertThat(cookie.verify(SecretKey.generate()), is(equalTo(false)));
+    }
 }

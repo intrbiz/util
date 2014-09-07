@@ -20,7 +20,7 @@ public class Hash
             MessageDigest md = MessageDigest.getInstance(SHA256);
             for (byte[] d : data)
             {
-                md.digest(d);
+                md.update(d);
             }
             return md.digest();
         }
@@ -37,7 +37,7 @@ public class Hash
             MessageDigest md = MessageDigest.getInstance(SHA512);
             for (byte[] d : data)
             {
-                md.digest(d);
+                md.update(d);
             }
             return md.digest();
         }
@@ -54,7 +54,7 @@ public class Hash
             MessageDigest md = MessageDigest.getInstance(MD5);
             for (byte[] d : data)
             {
-                md.digest(d);
+                md.update(d);
             }
             return md.digest();
         }
@@ -71,7 +71,7 @@ public class Hash
             MessageDigest md = MessageDigest.getInstance(SHA1);
             for (byte[] d : data)
             {
-                md.digest(d);
+                md.update(d);
             }
             return md.digest();
         }
@@ -84,5 +84,18 @@ public class Hash
     public static final byte[] asUTF8(String str)
     {
         return str.getBytes(UTF8);
+    }
+    
+    private static final char[] HEX_NIBBLE = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
+    
+    public static final String toHex(byte[] b)
+    {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < b.length; i++)
+        {
+            sb.append(HEX_NIBBLE[(b[i] >> 4) & 0xF]);
+            sb.append(HEX_NIBBLE[b[i] & 0xF]);
+        }
+        return sb.toString();
     }
 }
