@@ -1,6 +1,6 @@
 package com.intrbiz.crypto.cookie;
 
-import static com.intrbiz.util.Hash.sha256;
+import static com.intrbiz.util.Hash.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -22,7 +22,9 @@ import com.intrbiz.util.VarLen;
  * </p>
  */
 public class CryptoCookie
-{    
+{   
+    public static final byte[] OBFUSCATION_KEY = { 80, -84, -96, 30, -84, 26, 59, 9, 88, -31, 14, 73, 76, 63, -70, 83, 91, -7, 62, -77, -61, -75, -16, -79, 81, 36, -128, -72, -58, 28, 108, -92, 27, -7, 122, -11, 11, 35, -69, -74, -32, 7, 101, 50, 72, 110, -115, 41, 13, 121, 58, -30, -91, -43, 95, 12, 111, 125, -93, 41, 91, 120, -121, 122, 112, 58, -128, -12, 63, -38, -120, 6, -64, -128, 11, -16, 111, -102, -123, -91, 118, 73, 19, -62, -74, -70, 111, 116, 6, 0, 8, -118, -70, 123, 4, 27, -1, 60, -127, 53, -68, 123, -116, -35, -78, 63, -97, 123, 125, 121, -117, 123, 69, -59, -53, -105, 76, -102, -72, 52, 16, -104, -41, -29, 105, -95, 65, -89 };
+    
     private final byte[] token;
 
     private final long expiryTime;
@@ -209,6 +211,10 @@ public class CryptoCookie
         buffer.flip();
         byte[] cookie = new byte[buffer.limit()];
         buffer.get(cookie);
+        // xor with the obfuscation key
+        // this isn't for security but 
+        // to improve the look of the output
+        xor(cookie, OBFUSCATION_KEY);
         return cookie;
     }
     
@@ -230,8 +236,13 @@ public class CryptoCookie
     {
         try
         {
+            // reverse the obfuscation
+            xor(data, OBFUSCATION_KEY);
+            // read
             ByteBuffer buffer = ByteBuffer.wrap(data);
             // read header
+            byte  version = buffer.get();
+            if (version != 1) throw new IOException("Malformed CryptoCookie");
             long expiry  = VarLen.readInt64(buffer);
             int rebaked = VarLen.readInt32(buffer);
             long flags   = VarLen.readInt64(buffer);
@@ -278,7 +289,8 @@ public class CryptoCookie
     private byte[] packData()
     {
         // Layout: varLen64(expiry) + varLen32(rebaked) + varLen64(flags) + varLen32(token.length) + token
-        ByteBuffer buffer = ByteBuffer.allocate(24 + this.token.length);
+        ByteBuffer buffer = ByteBuffer.allocate(25 + this.token.length);
+        buffer.put((byte) 1);
         VarLen.writeInt64(this.expiryTime, buffer);
         VarLen.writeInt32(this.rebaked, buffer);
         VarLen.writeInt64(this.flags, buffer);
@@ -300,6 +312,14 @@ public class CryptoCookie
         public Flag(long mask)
         {
             this.mask = mask;
+        }
+    }
+    
+    private static void xor(byte[] data, byte[] key)
+    {
+        for (int i = 0; i < data.length; i++)
+        {
+            data[i] = (byte) (data[i] ^ key[i % key.length]);
         }
     }
 }
