@@ -4,7 +4,6 @@ import static com.intrbiz.util.Hash.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.security.SecureRandom;
 import java.util.Arrays;
 
 import org.apache.commons.codec.binary.Base64;
@@ -322,7 +321,6 @@ public class CryptoCookie
         return fromBytes(Base64.decodeBase64(data));
     }
 
-
     private byte[] packData()
     {
         // Layout: varLen64(expiry) + varLen32(rebaked) + varLen64(flags) + varLen32(token.length) + token
@@ -338,6 +336,14 @@ public class CryptoCookie
         buffer.get(data);
         return data;
     }
+    
+    private static void xor(byte[] data, byte[] key)
+    {
+        for (int i = 1; i < data.length; i++)
+        {
+            data[i] = (byte) (data[i] ^ key[i % key.length]);
+        }
+    }
 
     /**
      * Flags that can be set on a cookie
@@ -352,28 +358,38 @@ public class CryptoCookie
         }
     }
     
-    private static void xor(byte[] data, byte[] key)
+    /**
+     * Commonly useful cookie flags
+     */
+    public final static class Flags
     {
-        for (int i = 1; i < data.length; i++)
-        {
-            data[i] = (byte) (data[i] ^ key[i % key.length]);
-        }
+        /**
+         * This cookie is perpetual, never expires
+         */
+        public static final Flag Perpetual = new Flag(0x1);
+        
+        /**
+         * This cookie is intended to prevent forgery
+         */
+        public static final Flag AntiForgery = new Flag(0x02);
+        
+        /**
+         * This cookie represents a principal
+         */
+        public static final Flag Principal = new Flag(0x04);
+        
+        /**
+         * This cookie is intended to perform some form
+         * of reset.
+         */
+        public static final Flag Reset = new Flag(0x08);
     }
     
-    public static void main(String[] args)
+    public static final Flag[] flags(Flag[] a, Flag... b)
     {
-        for (int c = 0; c < 32; c++)
-        {
-            System.out.print("{ ");
-            SecureRandom sr = new SecureRandom();
-            byte[] b = new byte[128];
-            sr.nextBytes(b);
-            for (int i = 0; i < b.length; i++)
-            {
-                if (i > 0) System.out.print(", ");
-                System.out.print(Byte.toString(b[i]));
-            }
-            System.out.println(" }, ");
-        }
+        Flag[] r = new Flag[(a == null ? 0 : a.length) + (b == null ? 0 : b.length)];
+        if (a != null) System.arraycopy(a, 0, r, 0, a.length);
+        if (b != null) System.arraycopy(b, 0, r, (a == null ? 0 : a.length), b.length);
+        return r;
     }
 }
