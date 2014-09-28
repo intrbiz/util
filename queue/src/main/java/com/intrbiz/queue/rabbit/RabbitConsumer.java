@@ -128,12 +128,21 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements MultiCo
         Timer.Context ctx = this.consumeTimer.time();
         try
         {
-            // decode the event
-            T event = this.transcoder.decodeFromBytes(body);
-            // handle the event
-            this.handler.handleDevliery(event);
-            // ack the event
-            this.channel.basicAck(envelope.getDeliveryTag(), false);
+            try
+            {
+                // decode the event
+                T event = this.transcoder.decodeFromBytes(body);
+                // handle the event
+                this.handler.handleDevliery(event);
+                // ack the event
+                this.channel.basicAck(envelope.getDeliveryTag(), false);
+            }
+            catch (Exception e)
+            {
+                // send a nack for this delivery
+                logger.error("Error handling message delivery, rejecting for requeue", e);
+                this.channel.basicNack(envelope.getDeliveryTag(), false, true);
+            }
         }
         finally
         {
