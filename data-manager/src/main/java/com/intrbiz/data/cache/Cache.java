@@ -275,9 +275,7 @@ public interface Cache
     /**
      * Invalidate all cache entries (Optional)
      */
-    default void clear()
-    {
-    }
+    void clear();
     
     /**
      * Listen for entries which are removed from the cache (Optional)

@@ -240,6 +240,11 @@ public abstract class DatabaseAdapter implements DataAdapter
 
     // caching
     
+    public void cacheClear()
+    {
+        if (this.adapterCache != null) this.adapterCache.clear();
+    }
+    
     public void cacheOff()
     {
         if (this.adapterCache != null) this.adapterCache.disable();
