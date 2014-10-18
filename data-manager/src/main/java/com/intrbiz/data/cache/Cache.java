@@ -1,5 +1,6 @@
 package com.intrbiz.data.cache;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
@@ -34,12 +35,26 @@ public interface Cache
         return this.get(pointer.getKey());
     }
     
-    @SuppressWarnings("unchecked")
     default <T> List<T> getAndFollowList(String key)
     {
         CachePointerList pointer = this.get(key);
         if (pointer == null) return null;
-        return (List<T>) pointer.getKeys().stream().map((e) -> {return this.get(e);}).collect(Collectors.toList());
+        // process the pointer list
+        // failing fast on a cache miss of a referenced key
+        List<T> ret = new LinkedList<T>();
+        for (String pointerKey : pointer.getKeys())
+        {
+            T element = this.get(pointerKey);
+            if (element == null)
+            {
+                // we have a cache miss for an element 
+                // in the list need to invalidate the list
+                this.remove(key);
+                return null;
+            }
+            ret.add(element);
+        }
+        return ret;
     }
     
     /**
@@ -77,7 +92,22 @@ public interface Cache
         if (value instanceof CachePointerList)
         {
             // recursively follow
-            return (List<T>) ((CachePointerList) value).getKeys().stream().map((e) -> {return this.getOrFollow(e);}).collect(Collectors.toList());
+            // process the pointer list
+            // failing fast on a cache miss of a referenced key
+            List<T> ret = new LinkedList<T>();
+            for (String pointerKey : ((CachePointerList) value).getKeys())
+            {
+                T element = this.getOrFollow(pointerKey);
+                if (element == null)
+                {
+                    // we have a cache miss for an element 
+                    // in the list need to invalidate the list
+                    this.remove(key);
+                    return null;
+                }
+                ret.add(element);
+            }
+            return ret;
         }
         return (List<T>) value;
     }
