@@ -9,6 +9,8 @@ public interface Consumer<T> extends AutoCloseable
 {
     String name();
     
+    boolean requeueOnError();
+    
     DeliveryHandler<T> handler();
     
     void addBinding(String binding);
