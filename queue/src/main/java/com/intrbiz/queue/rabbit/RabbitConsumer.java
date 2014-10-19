@@ -148,8 +148,8 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements MultiCo
             catch (Exception e)
             {
                 // send a nack for this delivery
-                logger.error("Error handling message delivery, rejecting for requeue", e);
-                this.channel.basicNack(envelope.getDeliveryTag(), false, true);
+                logger.error("Error handling message delivery, rejecting" + (this.requeueOnError ? " for requeue" : ""), e);
+                this.channel.basicNack(envelope.getDeliveryTag(), false, this.requeueOnError);
             }
         }
         finally
