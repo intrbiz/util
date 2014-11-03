@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.intrbiz.util</groupId>
 	<artifactId>util</artifactId>
-	<version>1.0.0-rc-1</version>
+	<version>1.0.0-rc-2</version>
 	<packaging>pom</packaging>
 	<url>http://intrbiz.com/</url>
 	<name>Intrbiz Util</name>
@@ -111,7 +111,7 @@
 			<dependency>
 				<groupId>com.intrbiz.util</groupId>
 				<artifactId>data-manager</artifactId>
-				<version>1.0.0-rc-1</version>
+				<version>1.0.0-rc-2</version>
 			</dependency>
 			<dependency>
 				<groupId>com.hazelcast</groupId>
@@ -131,17 +131,17 @@
 			<dependency>
 				<groupId>com.intrbiz.core</groupId>
 				<artifactId>core</artifactId>
-				<version>1.0.0-rc-1</version>
+				<version>1.0.0-rc-2</version>
 			</dependency>
 			<dependency>
 				<groupId>com.intrbiz.util</groupId>
 				<artifactId>compiler</artifactId>
-				<version>1.0.0-rc-1</version>
+				<version>1.0.0-rc-2</version>
 			</dependency>
 			<dependency>
 				<groupId>com.intrbiz.util</groupId>
 				<artifactId>data-annotations</artifactId>
-				<version>1.0.0-rc-1</version>
+				<version>1.0.0-rc-2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.postgresql</groupId>
@@ -151,17 +151,17 @@
 			<dependency>
 				<groupId>com.intrbiz.gerald</groupId>
 				<artifactId>gerald-witchcraft</artifactId>
-				<version>1.0.0-rc-1</version>
+				<version>1.0.0-rc-2</version>
 			</dependency>
 			<dependency>
 				<groupId>com.intrbiz.express</groupId>
 				<artifactId>express</artifactId>
-				<version>4.0.0-rc-1</version>
+				<version>4.0.0-rc-3</version>
 			</dependency>
 			<dependency>
 				<groupId>com.intrbiz.util</groupId>
 				<artifactId>database-pool</artifactId>
-				<version>1.0.0-rc-1</version>
+				<version>1.0.0-rc-2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.maven</groupId>

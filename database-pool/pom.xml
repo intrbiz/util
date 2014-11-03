@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>com.intrbiz.util</groupId>
 		<artifactId>util</artifactId>
-		<version>1.0.0-rc-1</version>
+		<version>1.0.0-rc-2</version>
 	</parent>
 	<artifactId>database-pool</artifactId>
 	<name>pool</name>
@@ -45,7 +45,7 @@
 			<dependency>
 				<groupId>com.intrbiz.core</groupId>
 				<artifactId>core</artifactId>
-				<version>1.0.0-rc-1</version>
+				<version>1.0.0-rc-2</version>
 			</dependency>
 			<dependency>
 				<groupId>commons-dbcp</groupId>
@@ -60,7 +60,7 @@
 			<dependency>
 				<groupId>com.intrbiz.gerald</groupId>
 				<artifactId>gerald-witchcraft</artifactId>
-				<version>1.0.0-rc-1</version>
+				<version>1.0.0-rc-2</version>
 			</dependency>
 			<dependency>
 				<groupId>log4j</groupId>
