@@ -40,33 +40,4 @@
 			<artifactId>log4j</artifactId>
 		</dependency>
 	</dependencies>
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>com.intrbiz.core</groupId>
-				<artifactId>core</artifactId>
-				<version>1.0.0-rc-2</version>
-			</dependency>
-			<dependency>
-				<groupId>commons-dbcp</groupId>
-				<artifactId>commons-dbcp</artifactId>
-				<version>1.4</version>
-			</dependency>
-			<dependency>
-				<groupId>commons-pool</groupId>
-				<artifactId>commons-pool</artifactId>
-				<version>1.6</version>
-			</dependency>
-			<dependency>
-				<groupId>com.intrbiz.gerald</groupId>
-				<artifactId>gerald-witchcraft</artifactId>
-				<version>1.0.0-rc-2</version>
-			</dependency>
-			<dependency>
-				<groupId>log4j</groupId>
-				<artifactId>log4j</artifactId>
-				<version>1.2.14</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 </project>

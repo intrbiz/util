@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.intrbiz.util</groupId>
 	<artifactId>util</artifactId>
-	<version>1.0.0-rc-2</version>
+	<version>1.0.0-rc-3</version>
 	<packaging>pom</packaging>
 	<url>http://intrbiz.com/</url>
 	<name>Intrbiz Util</name>
@@ -203,6 +203,16 @@
 				<artifactId>amqp-client</artifactId>
 				<version>3.2.1</version>
 			</dependency>
+            <dependency>
+                <groupId>commons-dbcp</groupId>
+                <artifactId>commons-dbcp</artifactId>
+                <version>1.4</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-pool</groupId>
+                <artifactId>commons-pool</artifactId>
+                <version>1.6</version>
+            </dependency>
 		</dependencies>
 	</dependencyManagement>
 </project>
