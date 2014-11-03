@@ -180,7 +180,7 @@ public class CookieBaker
     
     protected CryptoCookie bake(byte[] token, long expiresAt, int rebaked, long flags)
     {
-        CryptoCookie cc = new CryptoCookie(expiresAt, rebaked, flags, token);
+        CryptoCookie cc = new CryptoCookie(expiresAt, rebaked, flags, token, this.random.nextInt() & 0x1F);
         cc.sign(this.key);
         return cc;
     }

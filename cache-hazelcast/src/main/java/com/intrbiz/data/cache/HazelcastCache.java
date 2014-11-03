@@ -161,6 +161,11 @@ public class HazelcastCache implements Cache
             tctx.stop();
         }
     }
+    
+    public void clear()
+    {
+        this.cache.clear();
+    }
 
     @Override
     public void close()

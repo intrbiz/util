@@ -33,18 +33,26 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements MultiCo
     
     protected final int threads;
     
-    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Timer consumeTimer, int threads)
+    protected final boolean requeueOnError;
+    
+    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Timer consumeTimer, int threads, boolean requeueOnError)
     {
         super(broker, transcoder);
         this.handler = handler;
         this.consumeTimer = consumeTimer;
         this.threads = threads;
+        this.requeueOnError = requeueOnError;
         this.init();
+    }
+    
+    public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Timer consumeTimer, int threads)
+    {
+        this(broker, transcoder, handler, consumeTimer, threads, true);
     }
     
     public RabbitConsumer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, DeliveryHandler<T> handler, Timer consumeTimer)
     {
-        this(broker, transcoder, handler, consumeTimer, 1);
+        this(broker, transcoder, handler, consumeTimer, 1, true);
     }
     
     protected abstract String setupQueue(Channel on) throws IOException;
@@ -128,12 +136,21 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements MultiCo
         Timer.Context ctx = this.consumeTimer.time();
         try
         {
-            // decode the event
-            T event = this.transcoder.decodeFromBytes(body);
-            // handle the event
-            this.handler.handleDevliery(event);
-            // ack the event
-            this.channel.basicAck(envelope.getDeliveryTag(), false);
+            try
+            {
+                // decode the event
+                T event = this.transcoder.decodeFromBytes(body);
+                // handle the event
+                this.handler.handleDevliery(event);
+                // ack the event
+                this.channel.basicAck(envelope.getDeliveryTag(), false);
+            }
+            catch (Exception e)
+            {
+                // send a nack for this delivery
+                logger.error("Error handling message delivery, rejecting" + (this.requeueOnError ? " for requeue" : ""), e);
+                this.channel.basicNack(envelope.getDeliveryTag(), false, this.requeueOnError);
+            }
         }
         finally
         {
@@ -157,5 +174,11 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements MultiCo
     public DeliveryHandler<T> handler()
     {
         return this.handler;
+    }
+    
+    @Override
+    public boolean requeueOnError()
+    {
+        return this.requeueOnError;
     }
 }

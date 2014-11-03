@@ -1,16 +1,18 @@
 package com.intrbiz.crypto.tests;
 
+import static org.hamcrest.MatcherAssert.*;
+import static org.hamcrest.Matchers.*;
+
+import static org.junit.Assert.fail;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
+import java.security.SecureRandom;
 
 import org.junit.Test;
 
 import com.intrbiz.crypto.SecretKey;
 import com.intrbiz.crypto.cookie.CryptoCookie;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
-
-import static org.junit.Assert.*;
 
 public class TestCryptoCookie
 {
@@ -18,12 +20,14 @@ public class TestCryptoCookie
     
     public static final SecretKey KEY = SecretKey.fromString("FnaDAfV/Zg43bL+2fRCX7B5Y5PB7/9jF4adr/Z9dd58gc9vyKb8niU1ZmI+DOs8FP+Oij25s5ZFGG8F+fK7hequZeJw/MpwoW8YLyiofL7pSyfdXTeFDye5UUI9X+aN4sWUcj7BbE2TxY5eaIYr0XHljJVDw6XTFmG4Pq1aHi9U=");
     
+    public static final SecureRandom RANDOM = new SecureRandom();
+    
     @Test
     public void createCookie()
     {
         long expiresAt = System.currentTimeMillis() + 3600000;
         //
-        CryptoCookie cookie = new CryptoCookie(expiresAt, 0, TOKEN);
+        CryptoCookie cookie = new CryptoCookie(expiresAt, 0, TOKEN, RANDOM.nextInt() & 0x1F);
         //
         assertThat(cookie.getToken(), is(notNullValue()));
         assertThat(cookie.getSignatue(), is(nullValue()));
@@ -40,7 +44,7 @@ public class TestCryptoCookie
     {
         long expiresAt = System.currentTimeMillis() + 3600000;
         //
-        CryptoCookie cookie = new CryptoCookie(expiresAt, 0, TOKEN);
+        CryptoCookie cookie = new CryptoCookie(expiresAt, 0, TOKEN, RANDOM.nextInt() & 0x1F);
         //
         assertThat(cookie.getToken(), is(notNullValue()));
         assertThat(cookie.getSignatue(), is(nullValue()));
@@ -63,7 +67,7 @@ public class TestCryptoCookie
     {
         long expiresAt = System.currentTimeMillis() + 3600000;
         //
-        CryptoCookie cookie = new CryptoCookie(expiresAt, 0, TOKEN);
+        CryptoCookie cookie = new CryptoCookie(expiresAt, 0, TOKEN, RANDOM.nextInt() & 0x1F);
         //
         assertThat(cookie.getToken(), is(notNullValue()));
         assertThat(cookie.getSignatue(), is(nullValue()));
@@ -108,7 +112,7 @@ public class TestCryptoCookie
     {
         long expiresAt = System.currentTimeMillis() + 3600000;
         //
-        CryptoCookie cookie = new CryptoCookie(expiresAt, 0, TOKEN);
+        CryptoCookie cookie = new CryptoCookie(expiresAt, 0, TOKEN, RANDOM.nextInt() & 0x1F);
         //
         assertThat(cookie.getToken(), is(notNullValue()));
         assertThat(cookie.getSignatue(), is(nullValue()));
@@ -132,5 +136,20 @@ public class TestCryptoCookie
         {
             assertTrue(true);
         }
+    }
+    
+    @Test
+    public void verifyCookie()
+    {
+        // the cookie
+        long expiresAt = System.currentTimeMillis() + 3600000;
+        CryptoCookie cookie = new CryptoCookie(expiresAt, 0, TOKEN, RANDOM.nextInt() & 0x1F);
+        cookie.sign(KEY);
+        // test verify
+        assertThat(cookie.verifySignature(KEY), is(equalTo(true)));
+        assertThat(cookie.verify(KEY), is(equalTo(true)));
+        // test does not varify with random key
+        assertThat(cookie.verifySignature(SecretKey.generate()), is(equalTo(false)));
+        assertThat(cookie.verify(SecretKey.generate()), is(equalTo(false)));
     }
 }
