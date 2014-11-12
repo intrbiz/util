@@ -1,7 +1,6 @@
 package com.intrbiz.queue.rabbit;
 
 import java.io.IOException;
-import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.UUID;
@@ -38,26 +37,23 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
     
     private ConcurrentMap<String, PendingRequest> pendingRequests = new ConcurrentHashMap<String, PendingRequest>();
     
-    private long timeout = TimeUnit.MINUTES.toMillis(10);
+    private long timeout;
     
-    private Timer vacuumCleaner;
+    private Timer timer;
     
-    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange, K defaultKey)
+    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange, K defaultKey, long timeout)
     {
         super(broker, transcoder);
         this.exchange = exchange;
         this.defaultKey = defaultKey;
         this.init();
-        this.vacuumCleaner = new Timer(true);
-        this.vacuumCleaner.schedule(new TimerTask()
-        {
-            @Override
-            public void run()
-            {
-                vacuum();
-            }
-            
-        }, this.timeout, this.timeout);
+        this.timeout = timeout;
+        this.timer = new Timer();
+    }
+    
+    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange, K defaultKey)
+    {
+        this(broker, transcoder, exchange, defaultKey, TimeUnit.SECONDS.toMillis(10));
     }
     
     public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange)
@@ -68,16 +64,6 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
     public final K defaultKey()
     {
         return this.defaultKey;
-    }
-    
-    protected void vacuum()
-    {
-        long now = System.currentTimeMillis();
-        for (Entry<String, PendingRequest> entry : this.pendingRequests.entrySet())
-        {
-            if ((now - entry.getValue().getSentAt()) > this.timeout) 
-                this.pendingRequests.remove(entry.getKey());
-        }
     }
     
     protected void setup() throws IOException
@@ -95,10 +81,9 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
                 String correlationId = properties.getCorrelationId();
                 if (correlationId != null)
                 {
-                    PendingRequest request = pendingRequests.get(correlationId);
+                    PendingRequest request = pendingRequests.remove(correlationId);
                     if (request != null)
                     {
-                        pendingRequests.remove(correlationId);
                         try 
                         {
                             request.complete(transcoder.decodeFromBytes(body));
@@ -138,21 +123,27 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
     {
         return this.publish(this.defaultKey, event);
     }
-    
+
     @Override
     public Future<T> publish(K key, T event)
     {
+        return this.publish(key, this.timeout, event);
+    }
+    
+    public Future<T> publish(K key, long timeout, T event)
+    {
         try
         {
-            String correlationId = (Long.toHexString(System.currentTimeMillis()) + "-" + UUID.randomUUID()).toUpperCase();
-            PendingRequest future = new PendingRequest(correlationId, event, System.currentTimeMillis());
+            PendingRequest future = new PendingRequest(event);
             // store the pending request
-            this.pendingRequests.put(correlationId, future);
+            this.pendingRequests.put(future.getId(), future);
+            // schedule the timeout
+            this.timer.schedule(future, timeout);
             // publish the request
             this.channel.basicPublish(
                     this.exchange.getName(), 
-                    key == null ? null : key.toString(), 
-                    new BasicProperties("application/json", null, null, 1, null, correlationId, this.replyQueue.getName(), null, null, null, null, null, null, null), 
+                    key == null ? "" : key.toString(), 
+                    new BasicProperties("application/json", null, null, 1, null, future.getId(), this.replyQueue.getName(), null, null, null, null, null, null, null), 
                     this.transcoder.encodeAsBytes(event)
             );
             return future;
@@ -163,24 +154,29 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
         }
     }
     
-    protected class PendingRequest implements Future<T>
+    protected class PendingRequest extends TimerTask implements Future<T>
     {
-        private String id;
+        private final String id;
         
         private final T request;
         
-        private final long sentAt;
-        
         private T response;
+        
+        private volatile boolean timeout;
         
         private volatile boolean done;
         
-        private volatile boolean cancelled;
-        
-        public PendingRequest(String id, T request, long sentAt)
+        public PendingRequest(T request)
         {
+            this.id = (Long.toHexString(System.currentTimeMillis()) + "-" + UUID.randomUUID()).toUpperCase();
             this.request = request;
-            this.sentAt = sentAt;
+        }
+        
+        @Override
+        public void run()
+        {
+            RabbitRPCClient.this.pendingRequests.remove(this.getId());
+            this.timeout();
         }
         
         public String getId()
@@ -193,11 +189,6 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
             return this.request;
         }
         
-        public long getSentAt()
-        {
-            return this.sentAt;
-        }
-        
         public T getResponse()
         {
             return this.response;
@@ -206,6 +197,18 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
         public void complete(T response)
         {
             this.response = response;
+            this.done = true;
+            this.cancel();
+            synchronized (this)
+            {
+                this.notifyAll();
+            }
+        }
+        
+        public void timeout()
+        {
+            this.timeout = true;
+            this.response = null;
             this.done = true;
             synchronized (this)
             {
@@ -216,19 +219,13 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
         @Override
         public boolean cancel(boolean mayInterruptIfRunning)
         {
-            this.cancelled = true;
-            RabbitRPCClient.this.pendingRequests.remove(this.id);
-            synchronized (this)
-            {
-                this.notifyAll();
-            }
-            return true;
+            throw new RuntimeException("Cancelling of requests is not supported");
         }
 
         @Override
         public boolean isCancelled()
         {
-            return this.cancelled;
+            return false;
         }
 
         @Override
@@ -240,20 +237,28 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
         @Override
         public T get() throws InterruptedException, ExecutionException
         {
-            synchronized (this)
+            if (! this.done)
             {
-                this.wait();
+                synchronized (this)
+                {
+                    this.wait();
+                }
             }
+            if (this.timeout) throw new QueueException("Request timeout");
             return this.response;
         }
 
         @Override
         public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
         {
-            synchronized (this)
+            if (! this.done)
             {
-                this.wait(unit.toMillis(timeout));
+                synchronized (this)
+                {
+                    this.wait(unit.toMillis(timeout));
+                }
             }
+            if (this.timeout) throw new QueueException("Request timeout");
             return this.response;
         }
     }
