@@ -25,7 +25,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 
-public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> implements RPCClient<T,K>
+public class RabbitRPCClient<T, R, K extends RoutingKey> extends RabbitBase<T> implements RPCClient<T, R,K>
 {
     private Logger logger = Logger.getLogger(RabbitRPCClient.class);
     
@@ -41,9 +41,12 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
     
     private Timer timer;
     
-    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange, K defaultKey, long timeout)
+    private final QueueEventTranscoder<R> responseTranscoder;
+    
+    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, Exchange exchange, K defaultKey, long timeout)
     {
         super(broker, transcoder);
+        this.responseTranscoder = responseTranscoder;
         this.exchange = exchange;
         this.defaultKey = defaultKey;
         this.init();
@@ -51,14 +54,14 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
         this.timer = new Timer();
     }
     
-    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange, K defaultKey)
+    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, Exchange exchange, K defaultKey)
     {
-        this(broker, transcoder, exchange, defaultKey, TimeUnit.SECONDS.toMillis(10));
+        this(broker, transcoder, responseTranscoder, exchange, defaultKey, TimeUnit.SECONDS.toMillis(10));
     }
     
-    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, Exchange exchange)
+    public RabbitRPCClient(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, Exchange exchange)
     {
-        this(broker, transcoder, exchange, null);
+        this(broker, transcoder, responseTranscoder, exchange, null);
     }
     
     public final K defaultKey()
@@ -86,7 +89,7 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
                     {
                         try 
                         {
-                            request.complete(transcoder.decodeFromBytes(body));
+                            request.complete(responseTranscoder.decodeFromBytes(body));
                         }
                         catch (Exception e)
                         {
@@ -119,19 +122,19 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
     }
     
     @Override
-    public Future<T> publish(T event)
+    public Future<R> publish(T event)
     {
         return this.publish(this.defaultKey, event);
     }
 
     @Override
-    public Future<T> publish(K key, T event)
+    public Future<R> publish(K key, T event)
     {
         return this.publish(key, this.timeout, event);
     }
     
     @Override
-    public Future<T> publish(K key, long timeout, T event)
+    public Future<R> publish(K key, long timeout, T event)
     {
         try
         {
@@ -155,13 +158,13 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
         }
     }
     
-    protected class PendingRequest extends TimerTask implements Future<T>
+    protected class PendingRequest extends TimerTask implements Future<R>
     {
         private final String id;
         
         private final T request;
         
-        private T response;
+        private R response;
         
         private volatile boolean timeout;
         
@@ -190,12 +193,12 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
             return this.request;
         }
         
-        public T getResponse()
+        public R getResponse()
         {
             return this.response;
         }
         
-        public void complete(T response)
+        public void complete(R response)
         {
             this.response = response;
             this.done = true;
@@ -236,7 +239,7 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
         }
 
         @Override
-        public T get() throws InterruptedException, ExecutionException
+        public R get() throws InterruptedException, ExecutionException
         {
             if (! this.done)
             {
@@ -250,7 +253,7 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
         }
 
         @Override
-        public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
+        public R get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
         {
             if (! this.done)
             {

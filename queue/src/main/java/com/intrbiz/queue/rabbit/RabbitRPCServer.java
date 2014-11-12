@@ -17,11 +17,11 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 
-public class RabbitRPCServer<T> extends RabbitBase<T> implements RPCServer<T>
+public class RabbitRPCServer<T, R> extends RabbitBase<T> implements RPCServer<T, R>
 {
     private Logger logger = Logger.getLogger(RabbitRPCServer.class);
 
-    private final RPCHandler<T> handler;
+    private final RPCHandler<T, R> handler;
 
     private final Exchange exchange;
 
@@ -32,10 +32,13 @@ public class RabbitRPCServer<T> extends RabbitBase<T> implements RPCServer<T>
     private Queue requestQueue;
 
     private String consumerName;
+    
+    private final QueueEventTranscoder<R> responseTranscoder;
 
-    public RabbitRPCServer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, RPCHandler<T> handler, Queue requestQueue, Exchange exchange, RoutingKey... bindings)
+    public RabbitRPCServer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, RPCHandler<T,R> handler, Queue requestQueue, Exchange exchange, RoutingKey... bindings)
     {
         super(broker, transcoder);
+        this.responseTranscoder = responseTranscoder;
         this.handler = handler;
         this.requestQueueSpec = requestQueue;
         this.exchange = exchange;
@@ -106,7 +109,7 @@ public class RabbitRPCServer<T> extends RabbitBase<T> implements RPCServer<T>
             // decode the event
             T event = this.transcoder.decodeFromBytes(body);
             // handle the event
-            T response = this.handler.handleDevliery(event);
+            R response = this.handler.handleDevliery(event);
             // ack the event
             this.channel.basicAck(envelope.getDeliveryTag(), false);
             // send the response
@@ -116,7 +119,7 @@ public class RabbitRPCServer<T> extends RabbitBase<T> implements RPCServer<T>
                         "", 
                         replyTo, 
                         new BasicProperties("application/json", null, null, 1, null, correlationId, null, null, null, null, null, null, null, null), 
-                        this.transcoder.encodeAsBytes(response)
+                        this.responseTranscoder.encodeAsBytes(response)
                 );
             }
         }
@@ -139,7 +142,7 @@ public class RabbitRPCServer<T> extends RabbitBase<T> implements RPCServer<T>
     }
 
     @Override
-    public RPCHandler<T> handler()
+    public RPCHandler<T, R> handler()
     {
         return this.handler;
     }
