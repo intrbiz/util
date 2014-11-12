@@ -130,6 +130,7 @@ public class RabbitRPCClient<T, K extends RoutingKey> extends RabbitBase<T> impl
         return this.publish(key, this.timeout, event);
     }
     
+    @Override
     public Future<T> publish(K key, long timeout, T event)
     {
         try

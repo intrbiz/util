@@ -16,6 +16,8 @@ public interface RPCClient<T, K extends RoutingKey> extends AutoCloseable
     
     Future<T> publish(K key, T event);
     
+    Future<T> publish(K key, long timeout, T event);
+    
     @Override
     void close();
 }
