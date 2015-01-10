@@ -7,6 +7,8 @@ import com.intrbiz.data.db.util.DBTypeAdapter;
 
 public class Column implements Comparable<Column>
 {
+    private int classIndex = 0;
+
     private int index = 1;
 
     private String name;
@@ -33,19 +35,30 @@ public class Column implements Comparable<Column>
         this.type = type;
     }
 
-    public Column(int index, String name, SQLType type)
+    public Column(int classIndex, int index, String name, SQLType type)
     {
         this(name, type);
+        this.classIndex = classIndex;
         this.index = index;
     }
-
-    public Column(int index, String name, SQLType type, Field definition, boolean notNull, Class<? extends DBTypeAdapter<?, ?>> adapter)
+    
+    public Column(int classIndex, int index, String name, SQLType type, Version since)
     {
         this(name, type);
+        this.classIndex = classIndex;
+        this.index = index;
+        this.since = since;
+    }
+
+    public Column(int classIndex, int index, String name, SQLType type, Field definition, boolean notNull, Class<? extends DBTypeAdapter<?, ?>> adapter, Version since)
+    {
+        this(name, type);
+        this.classIndex = classIndex;
         this.index = index;
         this.definition = definition;
         this.notNull = notNull;
         this.adapter = adapter;
+        this.since = since;
     }
 
     public String getName()
@@ -66,6 +79,16 @@ public class Column implements Comparable<Column>
     public void setType(SQLType type)
     {
         this.type = type;
+    }
+
+    public int getClassIndex()
+    {
+        return classIndex;
+    }
+
+    public void setClassIndex(int classIndex)
+    {
+        this.classIndex = classIndex;
     }
 
     public int getIndex()
@@ -145,7 +168,21 @@ public class Column implements Comparable<Column>
     @Override
     public int compareTo(Column o)
     {
-        return this.index - o.index;
+        /*
+         * Sort by: 
+         *  - version
+         *  - class index
+         *  - index
+         */
+        if (this.since.equals(o.since))
+        {
+           if (this.classIndex == o.classIndex)
+           {
+               return Integer.compare(this.index, o.index);
+           }
+           return Integer.compare(o.classIndex, this.classIndex);
+        }
+        return this.since.compareTo(o.since);
     }
 
     public String toString()

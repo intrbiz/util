@@ -7,6 +7,7 @@ import java.util.Map;
 import com.intrbiz.Util;
 import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
+import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
@@ -89,7 +90,11 @@ public abstract class SQLDialect
     
     public abstract SQLScript writeCreateTableForeignKeys(Table table);
     
+    public abstract SQLScript writeAlterTableAddColumn(Table table, Column col);
+    
     public abstract SQLScript writeCreateType(Type type);
+    
+    public abstract SQLScript writeAlterTypeAddColumn(Type type, Column col);
     
     public abstract SQLScript writeCreateFunction(Function function);
     

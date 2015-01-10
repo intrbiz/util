@@ -222,6 +222,14 @@ public class DatabaseAdapterCompiler
         SQLScriptSet set = new SQLScriptSet();
         // upgrade the version info function
         set.add(this.dialect.writeCreateSchemaVersionFunction(schema));
+        // add columns
+        for (Table table : schema.getTables())
+        {
+            for (Column col : table.findColumnsSince(installedVersion))
+            {
+                set.add(this.dialect.writeAlterTableAddColumn(table, col));
+            }
+        }
         // install any new tables
         for (Table table : schema.getTables())
         {
@@ -236,6 +244,14 @@ public class DatabaseAdapterCompiler
             if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()))
             {
                 set.add(this.dialect.writeCreateTableForeignKeys(table));
+            }
+        }
+        // add attributes
+        for (Type type : schema.getTypes())
+        {
+            for (Column col : type.findColumnsSince(installedVersion))
+            {
+                set.add(this.dialect.writeAlterTypeAddColumn(type, col));
             }
         }
         // install any new types

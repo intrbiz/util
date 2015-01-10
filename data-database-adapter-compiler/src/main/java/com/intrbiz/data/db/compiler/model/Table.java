@@ -1,7 +1,9 @@
 package com.intrbiz.data.db.compiler.model;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Table
 {
@@ -93,6 +95,11 @@ public class Table
         }
         return null;
     }
+    
+    public List<Column> findColumnsSince(Version version)
+    {
+        return this.columns.stream().filter((c) -> { return c.getSince().isAfter(version);  }).collect(Collectors.toList());
+    }
 
     public PrimaryKey getPrimaryKey()
     {
@@ -172,6 +179,16 @@ public class Table
     public void setVirtual(boolean virtual)
     {
         this.virtual = virtual;
+    }
+    
+    /**
+     * Perform final operations on the table, 
+     * such as sorting the columns
+     */
+    public void finish()
+    {
+        // sort the columns
+        Collections.sort(this.columns);
     }
 
     public String toString()

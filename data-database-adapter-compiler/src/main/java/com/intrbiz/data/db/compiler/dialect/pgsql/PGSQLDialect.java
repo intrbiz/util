@@ -241,6 +241,16 @@ public class PGSQLDialect extends SQLDialect
         else if (Deferable.INITIALLY_DEFERRED == d) return "INITIALLY DEFERRED";
         return "NOT DEFERRABLE";
     }
+    
+    public SQLScript writeAlterTableAddColumn(Table table, Column col)
+    {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
+        to.write("ALTER TABLE ").writeid(table.getSchema(), table.getName());
+        to.write(" ADD COLUMN ").writeid(col.getName()).write(" ").write(col.getType().getSQLType());
+        if (col.isNotNull()) to.write(" NOT NULL");
+        return s;
+    }
 
     @Override
     public SQLScript writeCreateType(Type type)
@@ -262,6 +272,15 @@ public class PGSQLDialect extends SQLDialect
         //
         s.command().write("ALTER TYPE ").writeid(type.getSchema(), type.getName()).write(" OWNER TO ").write(this.getOwner());
         //
+        return s;
+    }
+    
+    public SQLScript writeAlterTypeAddColumn(Type type, Column col)
+    {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
+        to.write("ALTER TYPE ").writeid(type.getSchema(), type.getName());
+        to.write(" ADD ATTRIBUTE ").writeid(col.getName()).write(" ").write(col.getType().getSQLType());
         return s;
     }
 
