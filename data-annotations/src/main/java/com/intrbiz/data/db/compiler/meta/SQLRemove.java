@@ -12,4 +12,5 @@ public @interface SQLRemove {
     String name();
     Class<?> table();
     SQLVersion since();
+    SQLQuery[] query() default {};
 }

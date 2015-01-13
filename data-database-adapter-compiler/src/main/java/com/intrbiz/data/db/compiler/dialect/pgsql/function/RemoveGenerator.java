@@ -1,10 +1,12 @@
 package com.intrbiz.data.db.compiler.dialect.pgsql.function;
 
+import com.intrbiz.Util;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
 import com.intrbiz.data.db.compiler.model.Argument;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Table;
+import com.intrbiz.data.db.compiler.model.function.RemoveInfo;
 import com.intrbiz.data.db.compiler.util.SQLCommand;
 
 public class RemoveGenerator implements SQLFunctionGenerator
@@ -12,10 +14,23 @@ public class RemoveGenerator implements SQLFunctionGenerator
     @Override
     public void writeCreateFunctionBody(SQLDialect dialect, SQLCommand to, Function function)
     {
+        RemoveInfo info = (RemoveInfo) function.getIntrospectionInformation();
+        //
         to.writeln("DECLARE");
         to.writeln("BEGIN");
         //
-        this.generateDelete(dialect, to, function);
+        if (info.hasQuery())
+        {
+            String query = info.getQuery(dialect.getDialectName());
+            if (Util.isEmpty(query)) throw new RuntimeException("The function " + function.getName() + " has no query for the dialect " + dialect.getDialectName());
+            to.write(query);
+            to.writeln(";");
+        }
+        else
+        {
+            this.generateDelete(dialect, to, function);
+        }
+        //
         to.writeln("  RETURN NEXT 1;");
         to.writeln("  RETURN;");
         //
