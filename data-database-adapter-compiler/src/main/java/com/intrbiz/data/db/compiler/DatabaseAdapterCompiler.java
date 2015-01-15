@@ -205,7 +205,7 @@ public class DatabaseAdapterCompiler
         // add any install patches for this version
         for (Patch patch : schema.getPatches())
         {
-            if (ScriptType.INSTALL == patch.getType() && patch.getVersion().isBeforeOrEqual(schema.getVersion()))
+            if ((ScriptType.INSTALL == patch.getType() || ScriptType.BOTH == patch.getType()) && patch.getVersion().isBeforeOrEqual(schema.getVersion()))
             {
                 set.add(patch.getScript());
             }
@@ -265,7 +265,7 @@ public class DatabaseAdapterCompiler
         // run any table / type upgrade scripts
         for (Patch patch : schema.getPatches())
         {
-            if (ScriptType.UPGRADE == patch.getType() && patch.getVersion().isAfter(installedVersion))
+            if ((ScriptType.UPGRADE == patch.getType() || ScriptType.BOTH == patch.getType()) && patch.getVersion().isAfter(installedVersion))
             {
                 set.add(patch.getScript());
             }
