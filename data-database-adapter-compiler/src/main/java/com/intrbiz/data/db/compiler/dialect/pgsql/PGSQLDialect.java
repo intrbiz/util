@@ -242,6 +242,21 @@ public class PGSQLDialect extends SQLDialect
         return "NOT DEFERRABLE";
     }
     
+    public SQLScript writeAlterTableAddForeignKey(Table table, ForeignKey key)
+    {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
+        to.write("ALTER TABLE ").writeid(table.getSchema(), table.getName());
+        to.write(" ADD CONSTRAINT ").writeid(key.getName()).write(" FOREIGN KEY");
+        to.write(" (").writeColumnNameList(key.getColumns()).write(")");
+        to.write(" REFERENCES ").writeid(key.getReferences().getSchema(), key.getReferences().getName());
+        to.write(" (").writeColumnNameList(key.getOn()).write(")");
+        to.write(" ON DELETE ").write(this.writeForeignKeyAction(key.getOnDelete()));
+        to.write(" ON UPDATE ").write(this.writeForeignKeyAction(key.getOnUpdate()));
+        to.write(" ").write(this.writeForeignKeyDeferable(key.getDeferable()));
+        return s;
+    }
+    
     public SQLScript writeAlterTableAddColumn(Table table, Column col)
     {
         SQLScript s = new SQLScript();

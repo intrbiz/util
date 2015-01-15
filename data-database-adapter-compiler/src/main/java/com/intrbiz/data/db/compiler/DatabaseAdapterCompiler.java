@@ -37,6 +37,7 @@ import com.intrbiz.data.db.compiler.meta.SQLRemove;
 import com.intrbiz.data.db.compiler.meta.SQLSetter;
 import com.intrbiz.data.db.compiler.meta.ScriptType;
 import com.intrbiz.data.db.compiler.model.Column;
+import com.intrbiz.data.db.compiler.model.ForeignKey;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Patch;
 import com.intrbiz.data.db.compiler.model.Schema;
@@ -225,9 +226,14 @@ public class DatabaseAdapterCompiler
         // add columns
         for (Table table : schema.getTables())
         {
-            for (Column col : table.findColumnsSince(installedVersion))
+            // only add columns to table we are not going to install
+            if (table.getSince().isBeforeOrEqual(installedVersion) && (! table.isVirtual()))
             {
-                set.add(this.dialect.writeAlterTableAddColumn(table, col));
+                // columns
+                for (Column col : table.findColumnsSince(installedVersion))
+                {
+                    set.add(this.dialect.writeAlterTableAddColumn(table, col));
+                }
             }
         }
         // install any new tables
@@ -236,6 +242,19 @@ public class DatabaseAdapterCompiler
             if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()))
             {
                 set.add(this.dialect.writeCreateTable(table));
+            }
+        }
+        // add foreign keys
+        for (Table table : schema.getTables())
+        {
+            // only add columns to table we are not going to install
+            if (table.getSince().isBeforeOrEqual(installedVersion) && (! table.isVirtual()))
+            {
+                // columns
+                for (ForeignKey fkey : table.findForeignKeysSince(installedVersion))
+                {
+                    set.add(this.dialect.writeAlterTableAddForeignKey(table, fkey));
+                }
             }
         }
         // install foreign keys for any new tables

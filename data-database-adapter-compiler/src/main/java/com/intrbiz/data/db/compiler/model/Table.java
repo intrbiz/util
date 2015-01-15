@@ -135,6 +135,11 @@ public class Table
     {
         this.foreignKeys.add(key);
     }
+    
+    public List<ForeignKey> findForeignKeysSince(Version version)
+    {
+        return this.foreignKeys.stream().filter((c) -> { return c.getSince().isAfter(version);  }).collect(Collectors.toList());
+    }
 
     public Class<?> getDefinition()
     {

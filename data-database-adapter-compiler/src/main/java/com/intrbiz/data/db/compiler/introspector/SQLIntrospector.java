@@ -328,6 +328,8 @@ public class SQLIntrospector
                 key.setOnUpdate(fkey.onUpdate());
                 key.setOnDelete(fkey.onDelete());
                 key.setDeferable(fkey.deferable());
+                // since
+                key.setSince(new Version(fkey.since()));
             }
         }
     }

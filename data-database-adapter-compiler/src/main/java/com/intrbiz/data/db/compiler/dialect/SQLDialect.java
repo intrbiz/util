@@ -8,6 +8,7 @@ import com.intrbiz.Util;
 import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
 import com.intrbiz.data.db.compiler.model.Column;
+import com.intrbiz.data.db.compiler.model.ForeignKey;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
@@ -91,6 +92,8 @@ public abstract class SQLDialect
     public abstract SQLScript writeCreateTableForeignKeys(Table table);
     
     public abstract SQLScript writeAlterTableAddColumn(Table table, Column col);
+    
+    public abstract SQLScript writeAlterTableAddForeignKey(Table table, ForeignKey fkey);
     
     public abstract SQLScript writeCreateType(Type type);
     
