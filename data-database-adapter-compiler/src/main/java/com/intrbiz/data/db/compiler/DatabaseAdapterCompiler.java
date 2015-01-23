@@ -268,9 +268,13 @@ public class DatabaseAdapterCompiler
         // add attributes
         for (Type type : schema.getTypes())
         {
-            for (Column col : type.findColumnsSince(installedVersion))
+            // only add attributes to table we are not going to install
+            if (type.getSince().isBeforeOrEqual(installedVersion))
             {
-                set.add(this.dialect.writeAlterTypeAddColumn(type, col));
+                for (Column col : type.findColumnsSince(installedVersion))
+                {
+                    set.add(this.dialect.writeAlterTypeAddColumn(type, col));
+                }
             }
         }
         // install any new types
