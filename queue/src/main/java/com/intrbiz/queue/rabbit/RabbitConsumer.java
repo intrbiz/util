@@ -1,6 +1,7 @@
 package com.intrbiz.queue.rabbit;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -12,12 +13,13 @@ import com.intrbiz.queue.MultiConsumer;
 import com.intrbiz.queue.QueueBrokerPool;
 import com.intrbiz.queue.QueueEventTranscoder;
 import com.intrbiz.queue.QueueException;
+import com.intrbiz.queue.name.RoutingKey;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 
-public abstract class RabbitConsumer<T> extends RabbitBase<T> implements MultiConsumer<T>
+public abstract class RabbitConsumer<T, K extends RoutingKey> extends RabbitBase<T> implements MultiConsumer<T, K>
 {
     private Logger logger = Logger.getLogger(RabbitConsumer.class);
 
@@ -27,7 +29,7 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements MultiCo
 
     protected String[] consumerNames;
     
-    protected Set<String> bindings = new CopyOnWriteArraySet<String>();
+    protected Set<K> bindings = new CopyOnWriteArraySet<K>();
     
     protected final Timer consumeTimer;
     
@@ -65,39 +67,53 @@ public abstract class RabbitConsumer<T> extends RabbitBase<T> implements MultiCo
     {
     }
     
-    @Override
-    public synchronized final void addBinding(String binding)
+    public Set<K> getBindings()
     {
-        this.bindings.add(binding);
-        try
+        return Collections.unmodifiableSet(this.bindings);
+    }
+    
+    @Override
+    public synchronized final void addBinding(K binding)
+    {
+        if (binding != null)
         {
-            this.addQueueBinding(this.channel, binding);
-        }
-        catch (Exception e)
-        {
-            throw new QueueException("Failed to add binding", e);
+            this.bindings.add(binding);
+            try
+            {
+                this.addQueueBinding(this.channel, binding.toString());
+            }
+            catch (Exception e)
+            {
+                throw new QueueException("Failed to add binding", e);
+            }
         }
     }
     
     @Override
-    public synchronized final void removeBinding(String binding)
+    public synchronized final void removeBinding(K binding)
     {
-        this.bindings.remove(binding);
-        try
+        if (binding != null)
         {
-            this.removeQueueBinding(this.channel, binding);
-        }
-        catch (Exception e)
-        {
-            throw new QueueException("Failed to remove binding", e);
+            this.bindings.remove(binding);
+            try
+            {
+                this.removeQueueBinding(this.channel, binding.toString());
+            }
+            catch (Exception e)
+            {
+                throw new QueueException("Failed to remove binding", e);
+            }
         }
     }
     
     protected void setupBindings() throws IOException
     {
-        for (String binding : this.bindings)
+        for (K binding : this.bindings)
         {
-            this.addQueueBinding(this.channel, binding);
+            if (binding != null)
+            {
+                this.addQueueBinding(this.channel, binding.toString());
+            }
         }
     }
 
