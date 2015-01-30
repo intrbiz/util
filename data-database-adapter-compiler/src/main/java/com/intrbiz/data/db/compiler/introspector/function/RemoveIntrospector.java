@@ -7,6 +7,7 @@ import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
 import com.intrbiz.data.db.compiler.introspector.SQLIntrospector;
 import com.intrbiz.data.db.compiler.meta.SQLParam;
+import com.intrbiz.data.db.compiler.meta.SQLQuery;
 import com.intrbiz.data.db.compiler.meta.SQLRemove;
 import com.intrbiz.data.db.compiler.model.Argument;
 import com.intrbiz.data.db.compiler.model.Column;
@@ -56,6 +57,11 @@ public class RemoveIntrospector implements SQLFunctionIntrospector
             {
                 throw new RuntimeException("The parameter " + i + " of method " + method + " is not annotated!");
             }
+        }
+        // custom query
+        for (SQLQuery query : remove.query())
+        {
+            info.addQuery(query.dialect(), query.value());
         }
         return function;
     }

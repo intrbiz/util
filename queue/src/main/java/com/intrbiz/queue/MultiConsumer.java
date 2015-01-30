@@ -1,6 +1,8 @@
 package com.intrbiz.queue;
 
-public interface MultiConsumer<T> extends Consumer<T>
+import com.intrbiz.queue.name.RoutingKey;
+
+public interface MultiConsumer<T, K extends RoutingKey> extends Consumer<T, K>
 {
     String[] names();
 }

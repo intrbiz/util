@@ -241,6 +241,31 @@ public class PGSQLDialect extends SQLDialect
         else if (Deferable.INITIALLY_DEFERRED == d) return "INITIALLY DEFERRED";
         return "NOT DEFERRABLE";
     }
+    
+    public SQLScript writeAlterTableAddForeignKey(Table table, ForeignKey key)
+    {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
+        to.write("ALTER TABLE ").writeid(table.getSchema(), table.getName());
+        to.write(" ADD CONSTRAINT ").writeid(key.getName()).write(" FOREIGN KEY");
+        to.write(" (").writeColumnNameList(key.getColumns()).write(")");
+        to.write(" REFERENCES ").writeid(key.getReferences().getSchema(), key.getReferences().getName());
+        to.write(" (").writeColumnNameList(key.getOn()).write(")");
+        to.write(" ON DELETE ").write(this.writeForeignKeyAction(key.getOnDelete()));
+        to.write(" ON UPDATE ").write(this.writeForeignKeyAction(key.getOnUpdate()));
+        to.write(" ").write(this.writeForeignKeyDeferable(key.getDeferable()));
+        return s;
+    }
+    
+    public SQLScript writeAlterTableAddColumn(Table table, Column col)
+    {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
+        to.write("ALTER TABLE ").writeid(table.getSchema(), table.getName());
+        to.write(" ADD COLUMN ").writeid(col.getName()).write(" ").write(col.getType().getSQLType());
+        if (col.isNotNull()) to.write(" NOT NULL");
+        return s;
+    }
 
     @Override
     public SQLScript writeCreateType(Type type)
@@ -262,6 +287,15 @@ public class PGSQLDialect extends SQLDialect
         //
         s.command().write("ALTER TYPE ").writeid(type.getSchema(), type.getName()).write(" OWNER TO ").write(this.getOwner());
         //
+        return s;
+    }
+    
+    public SQLScript writeAlterTypeAddColumn(Type type, Column col)
+    {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
+        to.write("ALTER TYPE ").writeid(type.getSchema(), type.getName());
+        to.write(" ADD ATTRIBUTE ").writeid(col.getName()).write(" ").write(col.getType().getSQLType());
         return s;
     }
 

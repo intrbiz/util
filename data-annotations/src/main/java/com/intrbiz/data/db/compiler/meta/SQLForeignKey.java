@@ -15,4 +15,8 @@ public @interface SQLForeignKey {
     Action onUpdate() default Action.NO_ACTION;
     Action onDelete() default Action.NO_ACTION;
     Deferable deferable() default Deferable.INITIALLY_DEFERRED;
+    /**
+     * The schema version that added this column
+     */
+    SQLVersion since();
 }

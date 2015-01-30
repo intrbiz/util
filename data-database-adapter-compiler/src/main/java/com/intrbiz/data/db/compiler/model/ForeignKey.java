@@ -21,6 +21,8 @@ public class ForeignKey
     private Action onDelete;
 
     private Deferable deferable;
+    
+    private Version since;
 
     public ForeignKey()
     {
@@ -111,5 +113,15 @@ public class ForeignKey
     public void setDeferable(Deferable deferable)
     {
         this.deferable = deferable;
+    }
+
+    public Version getSince()
+    {
+        return since;
+    }
+
+    public void setSince(Version since)
+    {
+        this.since = since;
     }
 }

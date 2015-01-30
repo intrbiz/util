@@ -37,6 +37,7 @@ import com.intrbiz.data.db.compiler.meta.SQLRemove;
 import com.intrbiz.data.db.compiler.meta.SQLSetter;
 import com.intrbiz.data.db.compiler.meta.ScriptType;
 import com.intrbiz.data.db.compiler.model.Column;
+import com.intrbiz.data.db.compiler.model.ForeignKey;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Patch;
 import com.intrbiz.data.db.compiler.model.Schema;
@@ -205,7 +206,7 @@ public class DatabaseAdapterCompiler
         // add any install patches for this version
         for (Patch patch : schema.getPatches())
         {
-            if (ScriptType.INSTALL == patch.getType() && patch.getVersion().isBeforeOrEqual(schema.getVersion()))
+            if ((ScriptType.INSTALL == patch.getType() || ScriptType.BOTH == patch.getType()) && patch.getVersion().isBeforeOrEqual(schema.getVersion()))
             {
                 set.add(patch.getScript());
             }
@@ -222,6 +223,19 @@ public class DatabaseAdapterCompiler
         SQLScriptSet set = new SQLScriptSet();
         // upgrade the version info function
         set.add(this.dialect.writeCreateSchemaVersionFunction(schema));
+        // add columns
+        for (Table table : schema.getTables())
+        {
+            // only add columns to table we are not going to install
+            if (table.getSince().isBeforeOrEqual(installedVersion) && (! table.isVirtual()))
+            {
+                // columns
+                for (Column col : table.findColumnsSince(installedVersion))
+                {
+                    set.add(this.dialect.writeAlterTableAddColumn(table, col));
+                }
+            }
+        }
         // install any new tables
         for (Table table : schema.getTables())
         {
@@ -230,12 +244,37 @@ public class DatabaseAdapterCompiler
                 set.add(this.dialect.writeCreateTable(table));
             }
         }
+        // add foreign keys
+        for (Table table : schema.getTables())
+        {
+            // only add columns to table we are not going to install
+            if (table.getSince().isBeforeOrEqual(installedVersion) && (! table.isVirtual()))
+            {
+                // columns
+                for (ForeignKey fkey : table.findForeignKeysSince(installedVersion))
+                {
+                    set.add(this.dialect.writeAlterTableAddForeignKey(table, fkey));
+                }
+            }
+        }
         // install foreign keys for any new tables
         for (Table table : schema.getTables())
         {
             if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()))
             {
                 set.add(this.dialect.writeCreateTableForeignKeys(table));
+            }
+        }
+        // add attributes
+        for (Type type : schema.getTypes())
+        {
+            // only add attributes to table we are not going to install
+            if (type.getSince().isBeforeOrEqual(installedVersion))
+            {
+                for (Column col : type.findColumnsSince(installedVersion))
+                {
+                    set.add(this.dialect.writeAlterTypeAddColumn(type, col));
+                }
             }
         }
         // install any new types
@@ -249,7 +288,7 @@ public class DatabaseAdapterCompiler
         // run any table / type upgrade scripts
         for (Patch patch : schema.getPatches())
         {
-            if (ScriptType.UPGRADE == patch.getType() && patch.getVersion().isAfter(installedVersion))
+            if ((ScriptType.UPGRADE == patch.getType() || ScriptType.BOTH == patch.getType()) && patch.getVersion().isAfter(installedVersion))
             {
                 set.add(patch.getScript());
             }

@@ -2,7 +2,7 @@ package com.intrbiz.queue;
 
 import java.io.IOException;
 
-public interface RPCHandler<T>
+public interface RPCHandler<T, R>
 {
-    T handleDevliery(T event) throws IOException;
+    R handleDevliery(T event) throws IOException;
 }

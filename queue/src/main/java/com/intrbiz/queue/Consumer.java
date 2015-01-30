@@ -1,11 +1,13 @@
 package com.intrbiz.queue;
 
+import java.util.Set;
+
 import com.intrbiz.queue.name.RoutingKey;
 
 
 
 
-public interface Consumer<T> extends AutoCloseable
+public interface Consumer<T, K extends RoutingKey> extends AutoCloseable
 {
     String name();
     
@@ -13,19 +15,11 @@ public interface Consumer<T> extends AutoCloseable
     
     DeliveryHandler<T> handler();
     
-    void addBinding(String binding);
+    void addBinding(K binding);
     
-    default void addBinding(RoutingKey key)
-    {
-        this.addBinding(key.toString());
-    }
+    void removeBinding(K binding);
     
-    void removeBinding(String binding);
-    
-    default void removeBinding(RoutingKey key)
-    {
-        this.removeBinding(key.toString());
-    }
+    Set<K> getBindings();
     
     @Override
     void close();

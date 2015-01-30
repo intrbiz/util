@@ -12,15 +12,15 @@ import com.intrbiz.queue.name.RoutingKey;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Channel;
 
-public abstract class RabbitProducer<T> extends RabbitBase<T> implements Producer<T>, RoutedProducer<T>
+public abstract class RabbitProducer<T, K extends RoutingKey> extends RabbitBase<T> implements Producer<T>, RoutedProducer<T, K>
 {
     protected String exchange;
     
-    protected RoutingKey defaultKey;
+    protected K defaultKey;
     
     protected final Timer publishTimer;
 
-    public RabbitProducer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, RoutingKey defaultKey, Timer publishTimer)
+    public RabbitProducer(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder, K defaultKey, Timer publishTimer)
     {
         super(broker, transcoder);
         this.defaultKey = defaultKey;
@@ -62,7 +62,7 @@ public abstract class RabbitProducer<T> extends RabbitBase<T> implements Produce
     }
 
     @Override
-    public void publish(RoutingKey key, T event)
+    public void publish(K key, T event)
     {
         this.publish(
                 key, 
@@ -83,7 +83,7 @@ public abstract class RabbitProducer<T> extends RabbitBase<T> implements Produce
     }
     
     @Override
-    public void publish(RoutingKey key, T event, long ttl)
+    public void publish(K key, T event, long ttl)
     {
         this.publish(
                 key, 

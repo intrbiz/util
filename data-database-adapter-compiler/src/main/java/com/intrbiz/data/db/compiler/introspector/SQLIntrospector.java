@@ -205,6 +205,7 @@ public class SQLIntrospector
             this.typeCache.put(cls, type);
             type.setColumns(table.getColumns());
             type.setSince(table.getSince());
+            type.finish();
         }
         return type;
     }
@@ -222,8 +223,8 @@ public class SQLIntrospector
             this.tableCache.put(cls, table);
             // since
             table.setSince(new Version(sqlTable.since()));
-            // columns
-            this.buildTable(dialect, cls, table);
+            // build the table columns
+            this.buildTable(dialect, cls, 0, table);
             // primary key
             table.setPrimaryKey(new PrimaryKey(table.getName() + "_pk"));
             this.buildPrimaryKey(dialect, cls, table);
@@ -231,32 +232,27 @@ public class SQLIntrospector
             this.buildForeignKeys(dialect, cls, table);
             // unqiues
             this.buildUniques(dialect, cls, table);
+            // sort the columns
+            table.finish();
         }
         return table;
     }
 
-    protected void buildTable(SQLDialect dialect, Class<?> cls, Table model)
+    protected void buildTable(SQLDialect dialect, Class<?> cls, int classIndex, Table model)
     {
         if (cls == null) return;
-        //
-        buildTable(dialect, cls.getSuperclass(), model);
-        //
-        List<Column> attrs = new LinkedList<Column>();
+        // recurse up the inheritance hierarchy
+        buildTable(dialect, cls.getSuperclass(), classIndex + 1, model);
+        // build the list of columns
         for (Field field : cls.getDeclaredFields())
         {
-            Column attr = buildColumn(dialect, field, cls);
-            if (attr != null) attrs.add(attr);
-        }
-        Collections.sort(attrs);
-        //
-        for (Column attr : attrs)
-        {
-            model.addColumn(attr);
+            Column attr = buildColumn(dialect, field, cls, classIndex);
+            if (attr != null) model.addColumn(attr);
         }
     }
 
     @SuppressWarnings("unchecked")
-    protected Column buildColumn(SQLDialect dialect, Field field, Class<?> cls)
+    protected Column buildColumn(SQLDialect dialect, Field field, Class<?> cls, int classIndex)
     {
         SQLColumn sa = field.getAnnotation(SQLColumn.class);
         if (sa != null)
@@ -269,7 +265,7 @@ public class SQLIntrospector
             {
                 throw new RuntimeException("The field type: " + field.getType() + " is not compatible with the SQL Type: " + type.getSQLType() + " (" + type.getDefaultJavaType().getCanonicalName() + ")");
             }
-            return new Column(sa.index(), name, type, field, sa.notNull(), sa.adapter() == SQLColumn.NullAdapter.class ? null : (Class<? extends DBTypeAdapter<?,?>>) sa.adapter());
+            return new Column(classIndex, sa.index(), name, type, field, sa.notNull(), sa.adapter() == SQLColumn.NullAdapter.class ? null : (Class<? extends DBTypeAdapter<?,?>>) sa.adapter(), new Version(sa.since()));
         }
         return null;
     }
@@ -332,6 +328,8 @@ public class SQLIntrospector
                 key.setOnUpdate(fkey.onUpdate());
                 key.setOnDelete(fkey.onDelete());
                 key.setDeferable(fkey.deferable());
+                // since
+                key.setSince(new Version(fkey.since()));
             }
         }
     }

@@ -1,7 +1,9 @@
 package com.intrbiz.data.db.compiler.model;
 
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Type
 {
@@ -65,6 +67,20 @@ public class Type
     {
         this.columns.add(col);
     }
+    
+    public Column findColumn(String name)
+    {
+        for (Column col : this.getColumns())
+        {
+            if (name.equals(col.getName())) return col;
+        }
+        return null;
+    }
+    
+    public List<Column> findColumnsSince(Version version)
+    {
+        return this.columns.stream().filter((c) -> { return c.getSince().isAfter(version);  }).collect(Collectors.toList());
+    }
 
     public Version getSince()
     {
@@ -74,6 +90,16 @@ public class Type
     public void setSince(Version since)
     {
         this.since = since;
+    }
+    
+    /**
+     * Perform final operations on the table, 
+     * such as sorting the columns
+     */
+    public void finish()
+    {
+        // sort the columns
+        Collections.sort(this.columns);
     }
 
     public String toString()
