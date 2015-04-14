@@ -4,8 +4,8 @@ import org.junit.Test;
 
 import com.intrbiz.crypto.SecretKey;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 
 public class TestSecretKey
 {

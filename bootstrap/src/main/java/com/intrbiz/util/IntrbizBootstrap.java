@@ -96,17 +96,23 @@ public class IntrbizBootstrap
     
     private static String getAppClass(URL jar) throws IOException
     {
-        try (JarInputStream in = new JarInputStream(jar.openStream()))
+        JarInputStream in = new JarInputStream(jar.openStream());
+        try
         {
             Manifest mf = in.getManifest();
             Attributes main = mf.getMainAttributes();
             return main.getValue("App-Class");
         }
+        finally
+        {
+            in.close();
+        }
     }
     
     private static void extractJar(URL jar, File working) throws IOException
     {
-        try (JarInputStream in = new JarInputStream(jar.openStream()))
+        JarInputStream in = new JarInputStream(jar.openStream());
+        try
         {
             JarEntry je;
             while ((je = in.getNextJarEntry()) != null)
@@ -116,12 +122,22 @@ public class IntrbizBootstrap
                 {
                     File file = new File(working, name);
                     file.getParentFile().mkdirs();
-                    try (FileOutputStream out = new FileOutputStream(file))
+                    // write
+                    FileOutputStream out = new FileOutputStream(file);
+                    try
                     {
                         copy(out, in);
                     }
+                    finally
+                    {
+                        out.close();
+                    }
                 }
             }
+        }
+        finally
+        {
+            in.close();
         }
     }
     
