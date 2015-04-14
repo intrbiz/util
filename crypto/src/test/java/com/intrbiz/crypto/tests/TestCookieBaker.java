@@ -1,17 +1,18 @@
 package com.intrbiz.crypto.tests;
 
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
+
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 
 import com.intrbiz.crypto.SecretKey;
 import com.intrbiz.crypto.cookie.CookieBaker;
-import com.intrbiz.crypto.cookie.CryptoCookie;
 import com.intrbiz.crypto.cookie.CookieBaker.Expires;
 import com.intrbiz.crypto.cookie.CookieBaker.Rebake;
+import com.intrbiz.crypto.cookie.CryptoCookie;
 
-import static org.hamcrest.MatcherAssert.*;
-import static org.hamcrest.Matchers.*;
 
 public class TestCookieBaker
 {

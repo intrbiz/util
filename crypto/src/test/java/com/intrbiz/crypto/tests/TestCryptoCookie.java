@@ -1,10 +1,7 @@
 package com.intrbiz.crypto.tests;
 
-import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.Matchers.*;
-
-import static org.junit.Assert.fail;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.security.SecureRandom;
