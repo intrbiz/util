@@ -10,6 +10,7 @@ import com.codahale.metrics.Timer;
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.EntryListener;
 import com.hazelcast.core.IMap;
+import com.hazelcast.core.MapEvent;
 import com.intrbiz.gerald.source.IntelligenceSource;
 import com.intrbiz.gerald.witchcraft.Witchcraft;
 
@@ -68,6 +69,18 @@ public class HazelcastCache implements Cache
             public void entryEvicted(EntryEvent<String, Object> event)
             {
                 this.entryRemoved(event);
+            }
+
+            @Override
+            public void mapEvicted(MapEvent event)
+            {
+                // nothing to do yet
+            }
+
+            @Override
+            public void mapCleared(MapEvent event)
+            {
+                // nothing to do yet
             }
         };
         this.listenerId = this.cache.addEntryListener(this.listener, true);

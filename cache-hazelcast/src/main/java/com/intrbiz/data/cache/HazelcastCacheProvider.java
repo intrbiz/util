@@ -3,7 +3,7 @@ package com.intrbiz.data.cache;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.MapConfig.EvictionPolicy;
+import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
