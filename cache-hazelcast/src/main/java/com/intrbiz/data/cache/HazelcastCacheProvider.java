@@ -14,6 +14,8 @@ import com.intrbiz.data.DataManager.CacheProvider;
 public class HazelcastCacheProvider implements CacheProvider
 {
     private HazelcastInstance hazelcastInstance;
+    
+    public static final String MAP_PREFIX = "intrbiz.cache.";
 
     public HazelcastCacheProvider(HazelcastInstance hazelcastInstance)
     {
@@ -48,7 +50,7 @@ public class HazelcastCacheProvider implements CacheProvider
                     // setup the default configuration
                     config = new Config();
                     // add update configuration for our maps
-                    MapConfig cacheMapConfig = config.getMapConfig("intrbiz.cache.*");
+                    MapConfig cacheMapConfig = config.getMapConfig(HazelcastCacheProvider.MAP_PREFIX + "*");
                     // add default config for cache maps
                     cacheMapConfig.setMaxIdleSeconds(1 * 60 * 60); /* Objects are removed if they are idle for 1 hour */
                     cacheMapConfig.setEvictionPolicy(EvictionPolicy.LRU);
@@ -96,6 +98,6 @@ public class HazelcastCacheProvider implements CacheProvider
     @Override
     public Cache getCache(String name)
     {
-        return new HazelcastCache(name, this.hazelcastInstance.getMap("intrbiz.cache." + name));
+        return new HazelcastCache(name, this.hazelcastInstance);
     }
 }
