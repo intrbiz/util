@@ -1,5 +1,6 @@
 package com.intrbiz.data.db;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.function.Function;
 
@@ -183,7 +184,16 @@ public abstract class DatabaseAdapter implements DataAdapter
      */
     public final void execute(final Transaction transaction) throws DataException
     {
-        this.connection.execute(transaction);
+        this.begin();
+        try
+        {
+            transaction.run();
+            this.commit();
+        }
+        finally
+        {
+            this.end();
+        }
     }
 
     /*
@@ -192,7 +202,24 @@ public abstract class DatabaseAdapter implements DataAdapter
 
     public void execute(DatabaseCall<Void> transaction) throws DataException
     {
-        connection.execute(transaction);
+        this.begin();
+        try
+        {
+            try
+            {
+                transaction.run(this.connection.borrowConnection());
+                this.commit();
+            }
+            catch (SQLException e)
+            {
+                throw new DataException(e);
+            }
+
+        }
+        finally
+        {
+            this.end();
+        }
     }
 
     public boolean isInTransaction()
@@ -203,21 +230,25 @@ public abstract class DatabaseAdapter implements DataAdapter
     public void begin() throws DataException
     {
         connection.begin();
+        if (this.adapterCache != null) this.adapterCache.begin();
     }
 
     public void rollback() throws DataException
     {
         connection.rollback();
+        if (this.adapterCache != null) this.adapterCache.rollback();
     }
 
     public void commit() throws DataException
     {
         connection.commit();
+        if (this.adapterCache != null) this.adapterCache.commit();
     }
 
     public void end()
     {
         connection.end();
+        if (this.adapterCache != null) this.adapterCache.end();
     }
 
     public <T> T use(DatabaseCall<T> call) throws DataException
