@@ -81,33 +81,11 @@ public class HazelcastCacheTest
             assertThat(this.cache.get("key_1"), is(equalTo("value_1")));
             assertThat(this.cache.get("key_2"), is(equalTo("value_2")));
             assertThat(this.cache.get("key_3"), is(equalTo("value_3")));
-        }
-        finally
-        {
-            this.cache.commit();
-        }
-        assertThat(this.cache.get("key_1"), is(equalTo("value_1")));
-        assertThat(this.cache.get("key_2"), is(equalTo("value_2")));
-        assertThat(this.cache.get("key_3"), is(equalTo("value_3")));
-    }
-    
-    @Test
-    public void testTransactionPut2()
-    {
-        this.cache.begin();
-        try
-        {
-            this.cache.put("key_1", "value_1");
-            this.cache.put("key_2", "value_2");
-            this.cache.put("key_3", "value_3");
-            assertThat(this.cache.get("key_1"), is(equalTo("value_1")));
-            assertThat(this.cache.get("key_2"), is(equalTo("value_2")));
-            assertThat(this.cache.get("key_3"), is(equalTo("value_3")));
             this.cache.commit();
         }
         finally
         {
-            this.cache.rollback();
+            this.cache.end();
         }
         assertThat(this.cache.get("key_1"), is(equalTo("value_1")));
         assertThat(this.cache.get("key_2"), is(equalTo("value_2")));
@@ -124,10 +102,11 @@ public class HazelcastCacheTest
             assertThat(this.cache.get("key_1"), is(equalTo("value_1")));
             this.cache.remove("key_1");
             assertThat(this.cache.get("key_1"), is(nullValue()));
+            this.cache.commit();
         }
         finally
         {
-            this.cache.commit();
+            this.cache.end();
         }
         assertThat(this.cache.get("key_1"), is(nullValue()));
     }

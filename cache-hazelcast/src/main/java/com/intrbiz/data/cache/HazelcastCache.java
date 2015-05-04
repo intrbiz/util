@@ -156,6 +156,7 @@ public final class HazelcastCache implements Cache
     @Override
     public void end()
     {
+        this.rollback();
         this.transaction = null;
         this.transactionCache = null;
     }
