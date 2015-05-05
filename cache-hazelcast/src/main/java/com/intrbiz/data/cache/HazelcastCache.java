@@ -9,16 +9,24 @@ import org.apache.log4j.Logger;
 import com.codahale.metrics.Timer;
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.EntryListener;
+import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
+import com.hazelcast.core.MapEvent;
+import com.hazelcast.core.TransactionalMap;
+import com.hazelcast.transaction.TransactionContext;
+import com.hazelcast.transaction.TransactionOptions;
+import com.hazelcast.transaction.TransactionOptions.TransactionType;
 import com.intrbiz.gerald.source.IntelligenceSource;
 import com.intrbiz.gerald.witchcraft.Witchcraft;
 
-public class HazelcastCache implements Cache
+public final class HazelcastCache implements Cache
 {
     private Logger logger = Logger.getLogger(HazelcastCache.class);
 
     private final String name;
-
+    
+    private final HazelcastInstance hazelcastInstance;
+    
     private final IMap<String, Object> cache;
 
     private final ConcurrentMap<CacheListener, Object> listeners = new ConcurrentHashMap<CacheListener, Object>();
@@ -26,6 +34,12 @@ public class HazelcastCache implements Cache
     private EntryListener<String, Object> listener;
 
     private String listenerId;
+    
+    // transaction support
+    
+    private TransactionContext transaction;
+    
+    private TransactionalMap<String, Object> transactionCache;
 
     // metrics
 
@@ -39,10 +53,12 @@ public class HazelcastCache implements Cache
     
     private final Timer containsTimer;
 
-    public HazelcastCache(String name, IMap<String, Object> cache)
+    public HazelcastCache(String name, HazelcastInstance hazelcastInstance)
     {
         this.name = name;
-        this.cache = cache;
+        this.hazelcastInstance = hazelcastInstance;
+        // the map
+        this.cache = this.hazelcastInstance.getMap(HazelcastCacheProvider.MAP_PREFIX + this.name);
         // register a listener
         this.listener = new EntryListener<String, Object>()
         {
@@ -69,6 +85,18 @@ public class HazelcastCache implements Cache
             {
                 this.entryRemoved(event);
             }
+
+            @Override
+            public void mapEvicted(MapEvent event)
+            {
+                // nothing to do yet
+            }
+
+            @Override
+            public void mapCleared(MapEvent event)
+            {
+                // nothing to do yet
+            }
         };
         this.listenerId = this.cache.addEntryListener(this.listener, true);
         // the soource to register metrics on
@@ -86,6 +114,52 @@ public class HazelcastCache implements Cache
     {
         return this.name;
     }
+    
+    @Override
+    public boolean isTransactional()
+    {
+        return true;
+    }
+        
+    @Override
+    public void begin()
+    {
+        // start a transaction
+        if (this.transaction != null)
+        {
+            // the transaction context
+            this.transaction = this.hazelcastInstance.newTransactionContext(new TransactionOptions().setTransactionType(TransactionType.LOCAL));
+            this.transaction.beginTransaction();
+            // get the map
+            this.transactionCache = this.transaction.getMap(HazelcastCacheProvider.MAP_PREFIX + this.name);
+        }
+    }
+
+    @Override
+    public void commit()
+    {
+        if (this.transaction != null)
+        {
+            this.transaction.commitTransaction();
+        }
+    }
+
+    @Override
+    public void rollback()
+    {
+        if (this.transaction != null)
+        {
+            this.transaction.rollbackTransaction();
+        }
+    }
+
+    @Override
+    public void end()
+    {
+        this.rollback();
+        this.transaction = null;
+        this.transactionCache = null;
+    }
 
     @Override
     @SuppressWarnings("unchecked")
@@ -94,7 +168,15 @@ public class HazelcastCache implements Cache
         Timer.Context tctx = this.getTimer.time();
         try
         {
-            T entry = (T) this.cache.get(key);
+            T entry = null;
+            if (this.transactionCache == null)
+            {
+                entry = (T) this.cache.get(key);
+            }
+            else
+            {
+                entry = (T) this.transactionCache.get(key);
+            }
             if (logger.isTraceEnabled()) logger.trace("Get: " + key + " => " + entry);
             return entry;
         }
@@ -111,7 +193,14 @@ public class HazelcastCache implements Cache
         try
         {
             if (logger.isTraceEnabled()) logger.trace("Put: " + key + " => " + entry);
-            this.cache.put(key, entry);
+            if (this.transactionCache == null)
+            {
+                this.cache.put(key, entry);
+            }
+            else
+            {
+                this.transactionCache.put(key, entry);
+            }
         }
         finally
         {
@@ -126,7 +215,14 @@ public class HazelcastCache implements Cache
         try
         {
             if (logger.isTraceEnabled()) logger.trace("Remove: " + key);
-            this.cache.remove(key);
+            if (this.transactionCache == null)
+            {
+                this.cache.remove(key);
+            }
+            else
+            {
+                this.transactionCache.remove(key);
+            }
         }
         finally
         {
@@ -140,7 +236,14 @@ public class HazelcastCache implements Cache
         Timer.Context tctx = this.containsTimer.time();
         try
         {
-            return this.cache.containsKey(key);
+            if (this.transactionCache == null)
+            {
+                return this.cache.containsKey(key);
+            }
+            else
+            {
+                return this.transactionCache.containsKey(key);
+            }
         }
         finally
         {
@@ -154,7 +257,14 @@ public class HazelcastCache implements Cache
         Timer.Context tctx = this.keySetTimer.time();
         try
         {
-            return this.cache.keySet(new KeyPrefixPredicate(keyPrefix));
+            if (this.transactionCache == null)
+            {
+                return this.cache.keySet(new KeyPrefixPredicate(keyPrefix));
+            }
+            else
+            {
+                return this.transactionCache.keySet(new KeyPrefixPredicate(keyPrefix));   
+            }
         }
         finally
         {
@@ -164,6 +274,7 @@ public class HazelcastCache implements Cache
     
     public void clear()
     {
+        // cannot be transactional :(
         this.cache.clear();
     }
 

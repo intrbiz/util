@@ -168,7 +168,7 @@ public class DatabaseConnection implements AutoCloseable
     /**
      * Get the connection to execute SQL against
      */
-    protected Connection borrowConnection() throws DataException
+    public Connection borrowConnection() throws DataException
     {
         // if we are in a transaction use that connection
         if (this.transaction != null) return this.transaction;
@@ -186,7 +186,7 @@ public class DatabaseConnection implements AutoCloseable
     /**
      * Release the connection which was in use
      */
-    protected void relinquishConnection(Connection connection)
+    public void relinquishConnection(Connection connection)
     {
         // only relinquish the connection if we are NOT in a transaction
         if (this.transaction == null)

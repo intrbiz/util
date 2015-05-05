@@ -339,4 +339,45 @@ public interface Cache
     default void state(CacheState state)
     {
     }
+    
+    /*
+     * Transaction support 
+     */
+    
+    /**
+     * Does this cache instance support transactions
+     */
+    default boolean isTransactional()
+    {
+        return false;
+    }
+    
+    /**
+     * Begin a transaction against this cache
+     */
+    default void begin()
+    {
+    }
+    
+    /**
+     * Commit the current changes made by the current transaction to the cache 
+     */
+    default void commit()
+    {
+    }
+    
+    /**
+     * Rollback the current changes made by the current transaction to the cache 
+     */
+    default void rollback()
+    {
+    }
+    
+    /**
+     * End the current transaction, going back to auto-commit mode, rolling back any uncommitted changes
+     */
+    default void end()
+    {
+        
+    }
 }
