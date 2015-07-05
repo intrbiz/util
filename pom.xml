@@ -107,7 +107,7 @@
 			<dependency>
 				<groupId>com.intrbiz.util</groupId>
 				<artifactId>data-manager</artifactId>
-				<version>1.1.0</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>com.hazelcast</groupId>
@@ -132,12 +132,12 @@
 			<dependency>
 				<groupId>com.intrbiz.util</groupId>
 				<artifactId>compiler</artifactId>
-				<version>1.1.0</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>com.intrbiz.util</groupId>
 				<artifactId>data-annotations</artifactId>
-				<version>1.1.0</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.postgresql</groupId>
@@ -147,7 +147,7 @@
 			<dependency>
 				<groupId>com.intrbiz.gerald</groupId>
 				<artifactId>gerald-witchcraft</artifactId>
-				<version>1.0.0</version>
+				<version>[1.1,)</version>
 			</dependency>
 			<dependency>
 				<groupId>com.intrbiz.express</groupId>
@@ -157,7 +157,7 @@
 			<dependency>
 				<groupId>com.intrbiz.util</groupId>
 				<artifactId>database-pool</artifactId>
-				<version>1.1.0</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.maven</groupId>
