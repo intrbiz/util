@@ -3,13 +3,15 @@ package com.intrbiz.queue.rabbit;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import org.apache.log4j.Logger;
 
 import com.intrbiz.queue.QueueBrokerPool;
 import com.intrbiz.queue.QueueEventTranscoder;
 import com.intrbiz.queue.QueueException;
 import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.ShutdownListener;
-import com.rabbitmq.client.ShutdownSignalException;
 
 public abstract class RabbitBase<T> implements AutoCloseable
 {
@@ -20,6 +22,10 @@ public abstract class RabbitBase<T> implements AutoCloseable
     protected volatile boolean closed;
 
     protected Channel channel;
+    
+    protected Timer timer = new Timer();
+    
+    private Logger logger = Logger.getLogger(RabbitBase.class);
     
     public RabbitBase(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder)
     {
@@ -39,14 +45,29 @@ public abstract class RabbitBase<T> implements AutoCloseable
             // initialise the connection and channel
             this.channel = broker.connect();
             // we need to reinit should the connection fail
-            this.channel.addShutdownListener(new Reinit());
+            this.channel.addShutdownListener((c) -> {
+                logger.warn("Lost connection to RabbitMQ, reconnecting in 5s");
+                this.scheduleReconnect();
+            });
             // setup this thing
             this.setup();
         }
         catch (IOException e)
         {
-            throw new QueueException("Cannot initialise connection", e);
+            logger.warn("Failed to connect to RabbitMQ, reconnecting in 5s", e);
+            this.scheduleReconnect();
         }
+    }
+    
+    protected void scheduleReconnect()
+    {
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run()
+            {
+                init();
+            }
+        }, 5_000L);
     }
     
     protected abstract void setup() throws IOException;
@@ -82,29 +103,6 @@ public abstract class RabbitBase<T> implements AutoCloseable
             {
             }
             this.channel = null;
-        }
-    }
-
-    private class Reinit implements ShutdownListener
-    {
-        @Override
-        public void shutdownCompleted(ShutdownSignalException cause)
-        {
-            while (true)
-            {
-                try
-                {
-                    Thread.sleep(5000);
-                    RabbitBase.this.init();
-                    break;
-                }
-                catch (QueueException e)
-                {
-                }
-                catch (InterruptedException e)
-                {
-                }
-            }
         }
     }
 }
