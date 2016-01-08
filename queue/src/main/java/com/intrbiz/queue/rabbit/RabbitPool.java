@@ -45,6 +45,7 @@ public class RabbitPool implements QueueBrokerPool<Channel>
             this.factory.setConnectionTimeout(5000);
             this.factory.setUri(uri);
             this.factory.setSharedExecutor(this.executor);
+            this.factory.setRequestedHeartbeat(5000);
             this.factory.setAutomaticRecoveryEnabled(true);
             this.factory.setTopologyRecoveryEnabled(true);
             this.factory.setNetworkRecoveryInterval(5000);
