@@ -95,7 +95,8 @@
 	    <module>bootstrap</module>
 	    <module>cache-hazelcast</module>
         <module>scripting</module>
-  </modules>
+        <module>manifold</module>
+	</modules>
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
