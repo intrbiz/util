@@ -77,6 +77,8 @@ public class PGSQLDialect extends SQLDialect
     private static final SQLType TYPE_INET = new SQLSimpleType("INET", "String", String.class);
     
     private static final SQLType TYPE_JSON = new SQLSimpleType("JSON", "String", String.class);
+    
+    private static final SQLType TYPE_BYTEA = new SQLSimpleType("BYTEA", "Bytes", byte[].class);
 
     public PGSQLDialect()
     {
@@ -109,6 +111,8 @@ public class PGSQLDialect extends SQLDialect
             return TYPE_DATE;
         else if (UUID.class == javaClass) 
             return TYPE_UUID;
+        else if (byte[].class == javaClass) 
+            return TYPE_BYTEA;
         else if (Enum.class.isAssignableFrom(javaClass))
             return new SQLEnumType((Class<? extends Enum<?>>) javaClass);
         throw new RuntimeException("Cannot get SQL type for java class: " + javaClass.getCanonicalName());
@@ -146,6 +150,8 @@ public class PGSQLDialect extends SQLDialect
             return TYPE_CIDR;
         else if ("JSON".equalsIgnoreCase(sqlType)) 
             return TYPE_JSON;
+        else if ("BYTEA".equalsIgnoreCase(sqlType)) 
+            return TYPE_BYTEA;
         throw new RuntimeException("The SQL type: " + sqlType + " is not supported");
     }
 
