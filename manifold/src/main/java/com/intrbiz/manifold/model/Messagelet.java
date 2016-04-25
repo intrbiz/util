@@ -1,6 +1,7 @@
 package com.intrbiz.manifold.model;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * Consume specific messages from a queue
@@ -13,5 +14,5 @@ public interface Messagelet<T>
 {
     void setup(MessageletContext context);
     
-    void consume(T message) throws IOException;
+    void consume(Map<String, Object> headers, T message) throws IOException;
 }
