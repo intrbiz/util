@@ -14,9 +14,27 @@ public interface RPCClient<T, R, K extends RoutingKey> extends AutoCloseable
     
     Future<R> publish(T event);
     
+    Future<R> publish(long timeout, T event);
+    
+    Future<R> publish(long timeout, T event, java.util.function.Consumer<R> onSuccess);
+    
+    Future<R> publish(long timeout, T event, java.util.function.Consumer<R> onSuccess, java.util.function.Consumer<Exception> onError);
+    
     Future<R> publish(K key, T event);
     
     Future<R> publish(K key, long timeout, T event);
+    
+    Future<R> publish(T event, java.util.function.Consumer<R> onSuccess, java.util.function.Consumer<Exception> onError);
+    
+    Future<R> publish(T event, java.util.function.Consumer<R> onSuccess);
+    
+    Future<R> publish(K key, T event, java.util.function.Consumer<R> onSuccess, java.util.function.Consumer<Exception> onError);
+    
+    Future<R> publish(K key, T event, java.util.function.Consumer<R> onSuccess);
+    
+    Future<R> publish(K key, long timeout, T event, java.util.function.Consumer<R> onSuccess, java.util.function.Consumer<Exception> onError);
+    
+    Future<R> publish(K key, long timeout, T event, java.util.function.Consumer<R> onSuccess);
     
     @Override
     void close();

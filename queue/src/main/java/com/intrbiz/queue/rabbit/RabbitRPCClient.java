@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 import org.apache.log4j.Logger;
 
@@ -25,7 +26,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.DefaultConsumer;
 import com.rabbitmq.client.Envelope;
 
-public class RabbitRPCClient<T, R, K extends RoutingKey> extends RabbitBase<T> implements RPCClient<T, R,K>
+public class RabbitRPCClient<T, R, K extends RoutingKey> extends RabbitBase<T> implements RPCClient<T, R, K>
 {
     private Logger logger = Logger.getLogger(RabbitRPCClient.class);
     
@@ -134,11 +135,59 @@ public class RabbitRPCClient<T, R, K extends RoutingKey> extends RabbitBase<T> i
     }
     
     @Override
+    public Future<R> publish(long timeout, T event)
+    {
+        return this.publish(this.defaultKey, timeout, event, null, null);
+    }
+
+    @Override
+    public Future<R> publish(long timeout, T event, Consumer<R> onSuccess)
+    {
+        return this.publish(this.defaultKey, timeout, event, onSuccess, null);
+    }
+
+    @Override
+    public Future<R> publish(long timeout, T event, Consumer<R> onSuccess, Consumer<Exception> onError)
+    {
+        return this.publish(this.defaultKey, timeout, event, onSuccess, onError);
+    }
+
+    @Override
     public Future<R> publish(K key, long timeout, T event)
+    {
+        return this.publish(key, this.timeout, event, null, null);
+    }
+    
+    @Override
+    public Future<R> publish(T event, Consumer<R> onSuccess, Consumer<Exception> onError)
+    {
+        return this.publish(this.defaultKey, this.timeout, event, onSuccess, onError);
+    }
+
+    @Override
+    public Future<R> publish(T event, Consumer<R> onSuccess)
+    {
+        return this.publish(this.defaultKey, this.timeout, event, onSuccess, null);
+    }
+
+    @Override
+    public Future<R> publish(K key, T event, Consumer<R> onSuccess, Consumer<Exception> onError)
+    {
+        return this.publish(key, this.timeout, event, onSuccess, onError);
+    }
+
+    @Override
+    public Future<R> publish(K key, T event, Consumer<R> onSuccess)
+    {
+        return this.publish(key, this.timeout, event, onSuccess, null);
+    }
+
+    @Override
+    public Future<R> publish(K key, long timeout, T event, Consumer<R> onSuccess, Consumer<Exception> onError)
     {
         try
         {
-            PendingRequest future = new PendingRequest(event);
+            PendingRequest future = new PendingRequest(event, onSuccess, onError);
             // store the pending request
             this.pendingRequests.put(future.getId(), future);
             // schedule the timeout
@@ -157,12 +206,24 @@ public class RabbitRPCClient<T, R, K extends RoutingKey> extends RabbitBase<T> i
             throw new QueueException("Failed to publish request", e);
         }
     }
-    
+
+    @Override
+    public Future<R> publish(K key, long timeout, T event, Consumer<R> onSuccess)
+    {
+        return this.publish(key, timeout, event, onSuccess, null);
+    }
+
+
+
     protected class PendingRequest extends TimerTask implements Future<R>
     {
         private final String id;
         
         private final T request;
+        
+        private final Consumer<R> onSuccess;
+        
+        private final Consumer<Exception> onError;
         
         private R response;
         
@@ -170,10 +231,22 @@ public class RabbitRPCClient<T, R, K extends RoutingKey> extends RabbitBase<T> i
         
         private volatile boolean done;
         
-        public PendingRequest(T request)
+        public PendingRequest(T request, Consumer<R> onSuccess, Consumer<Exception> onError)
         {
             this.id = (Long.toHexString(System.currentTimeMillis()) + "-" + UUID.randomUUID()).toUpperCase();
             this.request = request;
+            this.onSuccess = onSuccess;
+            this.onError = onError;
+        }
+        
+        public PendingRequest(T request, Consumer<R> onSuccess)
+        {
+            this(request, onSuccess, null);
+        }
+        
+        public PendingRequest(T request)
+        {
+            this(request, null, null);
         }
         
         @Override
@@ -203,6 +276,18 @@ public class RabbitRPCClient<T, R, K extends RoutingKey> extends RabbitBase<T> i
             this.response = response;
             this.done = true;
             this.cancel();
+            // invoke the callback
+            if (this.onSuccess != null)
+            {
+                try
+                {
+                    this.onSuccess.accept(response);
+                }
+                catch (Exception e)
+                {
+                }
+            }
+            // wake up anything waiting for this to complete
             synchronized (this)
             {
                 this.notifyAll();
@@ -214,6 +299,18 @@ public class RabbitRPCClient<T, R, K extends RoutingKey> extends RabbitBase<T> i
             this.timeout = true;
             this.response = null;
             this.done = true;
+            // invoke the callback
+            if (this.onError != null)
+            {
+                try
+                {
+                    this.onError.accept(new QueueException("Request timedout"));
+                }
+                catch (Exception e)
+                {
+                }
+            }
+            // wake up anything waiting for this to complete
             synchronized (this)
             {
                 this.notifyAll();
