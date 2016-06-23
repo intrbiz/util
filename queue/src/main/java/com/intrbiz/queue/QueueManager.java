@@ -46,7 +46,7 @@ public class QueueManager
     
     public QueueBrokerPool<?> broker(String name)
     {
-        return this.brokers.get(name);
+        return name == null ? this.defaultBroker : this.brokers.get(name);
     }
     
     // adapters

@@ -27,7 +27,7 @@ public class DatabasePoolConfiguration extends Configuration
     
     private long maxWait = 1000;
     
-    private int maxActive = 50;
+    private int maxActive = 100;
     
     private boolean testOnBorrow = true;
     

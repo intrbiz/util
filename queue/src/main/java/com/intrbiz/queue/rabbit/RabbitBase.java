@@ -4,12 +4,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.log4j.Logger;
+
 import com.intrbiz.queue.QueueBrokerPool;
 import com.intrbiz.queue.QueueEventTranscoder;
 import com.intrbiz.queue.QueueException;
 import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.ShutdownListener;
-import com.rabbitmq.client.ShutdownSignalException;
+import com.rabbitmq.client.Recoverable;
 
 public abstract class RabbitBase<T> implements AutoCloseable
 {
@@ -20,6 +21,8 @@ public abstract class RabbitBase<T> implements AutoCloseable
     protected volatile boolean closed;
 
     protected Channel channel;
+    
+    private Logger logger = Logger.getLogger(RabbitBase.class);
     
     public RabbitBase(QueueBrokerPool<Channel> broker, QueueEventTranscoder<T> transcoder)
     {
@@ -38,14 +41,17 @@ public abstract class RabbitBase<T> implements AutoCloseable
         {
             // initialise the connection and channel
             this.channel = broker.connect();
-            // we need to reinit should the connection fail
-            this.channel.addShutdownListener(new Reinit());
+            // log recovery events
+            ((Recoverable) this.channel).addRecoveryListener((r) -> {
+                logger.warn("Lost connection to RabbitMQ lost, auto-recovery complete");
+            });
             // setup this thing
             this.setup();
         }
         catch (IOException e)
         {
-            throw new QueueException("Cannot initialise connection", e);
+            logger.warn("Failed to connect to RabbitMQ", e);
+            throw new QueueException("Failed to connect to RabbitMQ, is it up?", e);
         }
     }
     
@@ -82,29 +88,6 @@ public abstract class RabbitBase<T> implements AutoCloseable
             {
             }
             this.channel = null;
-        }
-    }
-
-    private class Reinit implements ShutdownListener
-    {
-        @Override
-        public void shutdownCompleted(ShutdownSignalException cause)
-        {
-            while (true)
-            {
-                try
-                {
-                    Thread.sleep(5000);
-                    RabbitBase.this.init();
-                    break;
-                }
-                catch (QueueException e)
-                {
-                }
-                catch (InterruptedException e)
-                {
-                }
-            }
         }
     }
 }

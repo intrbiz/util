@@ -157,7 +157,7 @@ public abstract class RabbitConsumer<T, K extends RoutingKey> extends RabbitBase
                 // decode the event
                 T event = this.transcoder.decodeFromBytes(body);
                 // handle the event
-                this.handler.handleDevliery(event);
+                this.handler.handleDevliery(properties.getHeaders(), event);
                 // ack the event
                 this.channel.basicAck(envelope.getDeliveryTag(), false);
             }

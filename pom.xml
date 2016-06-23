@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.intrbiz.util</groupId>
 	<artifactId>util</artifactId>
-	<version>1.1.1</version>
+	<version>1.2.0</version>
 	<packaging>pom</packaging>
 	<url>http://intrbiz.com/</url>
 	<name>Intrbiz Util</name>
@@ -95,7 +95,8 @@
 	    <module>bootstrap</module>
 	    <module>cache-hazelcast</module>
         <module>scripting</module>
-  </modules>
+        <module>manifold</module>
+	</modules>
 	<dependencyManagement>
 		<dependencies>
 			<dependency>

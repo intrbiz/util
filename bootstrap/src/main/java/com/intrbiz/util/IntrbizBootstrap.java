@@ -37,7 +37,7 @@ public class IntrbizBootstrap
         if (jar == null) throw new RuntimeException("Failed to find JAR location");
         log("Using Jar: " + jar);
         // our working dir
-        File workingDir = (new File(".")).getAbsoluteFile().getParentFile();
+        File workingDir = (new File(System.getProperty("bootstrap.working.dir", "."))).getAbsoluteFile().getParentFile();
         log("Using working directory: " + workingDir.getAbsolutePath());
         // optionally extract
         if (Boolean.parseBoolean(System.getProperty("bootstrap.extract", "true")))
@@ -75,15 +75,27 @@ public class IntrbizBootstrap
     
     private static URLClassLoader createClassLoader(File workingDir) throws MalformedURLException
     {
+        File classesDir = new File(workingDir, "classes");
+        File libsDir = new File(workingDir, "lib");
+        // validate the one of the classes or libs directory exists
+        if ((! (classesDir.exists() && classesDir.isDirectory())) || (! (libsDir.exists() && libsDir.isDirectory())))
+        {
+            throw new RuntimeException("Unable to find classes (" + classesDir.getAbsolutePath() + ") or libraries (" + libsDir.getAbsolutePath() + "), is the working directory correct?");
+        }
+        // build the classpath
         Set<URL> urls = new HashSet<URL>();
         // classes
-        urls.add((new File(workingDir, "classes")).toURI().toURL());
-        // lib
-        for (File lib : (new File(workingDir, "lib")).listFiles())
+        urls.add(classesDir.toURI().toURL());
+        // libraries
+        File[] libs = libsDir.listFiles();
+        if (libs != null)
         {
-            if (lib.getName().endsWith(".jar"))
+            for (File lib : libs)
             {
-                urls.add(lib.toURI().toURL());
+                if (lib.getName().endsWith(".jar"))
+                {
+                    urls.add(lib.toURI().toURL());
+                }
             }
         }
         return URLClassLoader.newInstance(urls.toArray(new URL[0]));
