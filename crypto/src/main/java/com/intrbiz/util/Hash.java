@@ -13,7 +13,10 @@ public class Hash
     public static final String SHA256 = "SHA-256";
     public static final String SHA512 = "SHA-512";
     
+    public static final int SHA1_LENGTH = 20;
     public static final int SHA256_LENGTH = 32;
+    
+    public static final int HMAC_SHA1_BLOCKSIZE = 64;
     
     private static final byte HMAC_OPAD = 0x5C;
     private static final byte HMAC_IPAD = 0x36;
@@ -32,7 +35,22 @@ public class Hash
             key = tmp;
         }
         return sha256(xor(key, HMAC_OPAD), sha256Keyed(xor(key, HMAC_IPAD), slices));
-
+    }
+    
+    public static final byte[] sha1HMAC(byte[] key, BufferSlice... slices)
+    {
+        // sort out the key
+        if (key.length > HMAC_SHA1_BLOCKSIZE)
+        {
+            key = sha1(key);
+        }
+        if (key.length < HMAC_SHA1_BLOCKSIZE)
+        {
+            byte[] tmp = new byte[HMAC_SHA1_BLOCKSIZE];
+            System.arraycopy(key, 0, tmp, 0, key.length);
+            key = tmp;
+        }
+        return sha1(xor(key, HMAC_OPAD), sha1Keyed(xor(key, HMAC_IPAD), slices));
     }
     
     private static final byte[] sha256Keyed(byte[] key, BufferSlice... slices)
@@ -40,6 +58,24 @@ public class Hash
         try
         {
             MessageDigest md = MessageDigest.getInstance(SHA256);
+            md.update(key);
+            for (BufferSlice slice : slices)
+            {
+                md.update(slice.buffer, slice.offset, slice.length);
+            }
+            return md.digest();
+        }
+        catch (NoSuchAlgorithmException e)
+        {
+            throw new RuntimeException("No implementation for SHA-256", e);
+        }
+    }
+    
+    private static final byte[] sha1Keyed(byte[] key, BufferSlice... slices)
+    {
+        try
+        {
+            MessageDigest md = MessageDigest.getInstance(SHA1);
             md.update(key);
             for (BufferSlice slice : slices)
             {
@@ -68,7 +104,22 @@ public class Hash
             key = tmp;
         }
         return sha256(xor(key, HMAC_OPAD), sha256Keyed(xor(key, HMAC_IPAD), data));
-
+    }
+    
+    public static final byte[] sha1HMAC(byte[] key, byte[]... data)
+    {
+        // sort out the key
+        if (key.length > HMAC_SHA1_BLOCKSIZE)
+        {
+            key = sha1(key);
+        }
+        if (key.length < HMAC_SHA1_BLOCKSIZE)
+        {
+            byte[] tmp = new byte[HMAC_SHA1_BLOCKSIZE];
+            System.arraycopy(key, 0, tmp, 0, key.length);
+            key = tmp;
+        }
+        return sha1(xor(key, HMAC_OPAD), sha1Keyed(xor(key, HMAC_IPAD), data));
     }
     
     private static final byte[] xor(byte[] data, byte val)
@@ -96,6 +147,24 @@ public class Hash
         catch (NoSuchAlgorithmException e)
         {
             throw new RuntimeException("No implementation for SHA-256", e);
+        }
+    }
+    
+    private static final byte[] sha1Keyed(byte[] key, byte[]... data)
+    {
+        try
+        {
+            MessageDigest md = MessageDigest.getInstance(SHA1);
+            md.update(key);
+            for (byte[] d : data)
+            {
+                md.update(d);
+            }
+            return md.digest();
+        }
+        catch (NoSuchAlgorithmException e)
+        {
+            throw new RuntimeException("No implementation for SHA-1", e);
         }
     }
     
