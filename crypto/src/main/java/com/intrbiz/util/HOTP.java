@@ -105,9 +105,21 @@ public abstract class HOTP<T extends HOTPState>
             return (new Base32()).encodeToString(this.secret);
         }
         
+        public String toPrettyFormat()
+        {
+            StringBuilder sb = new StringBuilder();
+            char[] token = this.toString().toLowerCase().toCharArray();
+            for (int i = 0; i < token.length; i++)
+            {
+                if (i > 0 && (i % 4) == 0) sb.append(" ");
+                sb.append(token[i]);
+            }
+            return sb.toString();
+        }
+        
         public static final HOTPSecret fromString(String secret)
         {
-            return new HOTPSecret((new Base32()).decode(secret));
+            return new HOTPSecret((new Base32()).decode(secret.replace(" ", "").toUpperCase()));
         }
     }
 }
