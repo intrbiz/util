@@ -28,10 +28,6 @@
 			<artifactId>commons-dbcp</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>commons-pool</groupId>
-			<artifactId>commons-pool</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>com.intrbiz.gerald</groupId>
 			<artifactId>gerald-witchcraft</artifactId>
 		</dependency>
@@ -51,11 +47,6 @@
 				<groupId>commons-dbcp</groupId>
 				<artifactId>commons-dbcp</artifactId>
 				<version>1.4</version>
-			</dependency>
-			<dependency>
-				<groupId>commons-pool</groupId>
-				<artifactId>commons-pool</artifactId>
-				<version>1.6</version>
 			</dependency>
 			<dependency>
 				<groupId>com.intrbiz.gerald</groupId>
