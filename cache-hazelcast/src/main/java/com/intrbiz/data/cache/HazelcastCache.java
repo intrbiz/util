@@ -1,5 +1,6 @@
 package com.intrbiz.data.cache;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -8,11 +9,14 @@ import org.apache.log4j.Logger;
 
 import com.codahale.metrics.Timer;
 import com.hazelcast.core.EntryEvent;
-import com.hazelcast.core.EntryListener;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
-import com.hazelcast.core.MapEvent;
 import com.hazelcast.core.TransactionalMap;
+import com.hazelcast.map.listener.EntryAddedListener;
+import com.hazelcast.map.listener.EntryEvictedListener;
+import com.hazelcast.map.listener.EntryMergedListener;
+import com.hazelcast.map.listener.EntryRemovedListener;
+import com.hazelcast.map.listener.EntryUpdatedListener;
 import com.hazelcast.transaction.TransactionContext;
 import com.hazelcast.transaction.TransactionOptions;
 import com.hazelcast.transaction.TransactionOptions.TransactionType;
@@ -31,9 +35,7 @@ public final class HazelcastCache implements Cache
 
     private final ConcurrentMap<CacheListener, Object> listeners = new ConcurrentHashMap<CacheListener, Object>();
 
-    private EntryListener<String, Object> listener;
-
-    private String listenerId;
+    private final Set<String> listenerIds = new HashSet<String>();
     
     // transaction support
     
@@ -59,47 +61,43 @@ public final class HazelcastCache implements Cache
         this.hazelcastInstance = hazelcastInstance;
         // the map
         this.cache = this.hazelcastInstance.getMap(HazelcastCacheProvider.MAP_PREFIX + this.name);
-        // register a listener
-        this.listener = new EntryListener<String, Object>()
-        {
-            @Override
+        // setup our listeners
+        this.listenerIds.add(this.cache.addEntryListener(new EntryAddedListener<String, Object>() {
+        	@Override
             public void entryAdded(EntryEvent<String, Object> event)
             {
-                this.entryUpdated(event);
+        		firePut(event.getKey(), event.getValue());
             }
-
-            @Override
+        }, true));
+        this.listenerIds.add(this.cache.addEntryListener(new EntryUpdatedListener<String, Object>() {
+        	@Override
+            public void entryUpdated(EntryEvent<String, Object> event)
+            {
+        		firePut(event.getKey(), event.getValue());
+            }
+        }, true));
+        this.listenerIds.add(this.cache.addEntryListener(new EntryRemovedListener<String, Object>() {
+        	@Override
             public void entryRemoved(EntryEvent<String, Object> event)
             {
                 fireRemoval(event.getKey(), event.getValue());
             }
-
-            @Override
-            public void entryUpdated(EntryEvent<String, Object> event)
-            {
-                firePut(event.getKey(), event.getValue());
-            }
-
-            @Override
+        }, true));
+        this.listenerIds.add(this.cache.addEntryListener(new EntryEvictedListener<String, Object>() {
+        	@Override
             public void entryEvicted(EntryEvent<String, Object> event)
             {
-                this.entryRemoved(event);
+        		fireRemoval(event.getKey(), event.getValue());
             }
-
-            @Override
-            public void mapEvicted(MapEvent event)
+        }, true));
+        this.listenerIds.add(this.cache.addEntryListener(new EntryMergedListener<String, Object>() {
+        	@Override
+            public void entryMerged(EntryEvent<String, Object> event)
             {
-                // nothing to do yet
+        		firePut(event.getKey(), event.getValue());
             }
-
-            @Override
-            public void mapCleared(MapEvent event)
-            {
-                // nothing to do yet
-            }
-        };
-        this.listenerId = this.cache.addEntryListener(this.listener, true);
-        // the soource to register metrics on
+        }, true));
+        // the source to register metrics on
         IntelligenceSource source = Witchcraft.get().source("com.intrbiz.cache.hazelcast");
         // metrics
         this.getTimer      = source.getRegistry().timer(Witchcraft.scoped(HazelcastCache.class, "get",      name));
@@ -128,7 +126,7 @@ public final class HazelcastCache implements Cache
         if (this.transaction != null)
         {
             // the transaction context
-            this.transaction = this.hazelcastInstance.newTransactionContext(new TransactionOptions().setTransactionType(TransactionType.LOCAL));
+            this.transaction = this.hazelcastInstance.newTransactionContext(new TransactionOptions().setTransactionType(TransactionType.ONE_PHASE));
             this.transaction.beginTransaction();
             // get the map
             this.transactionCache = this.transaction.getMap(HazelcastCacheProvider.MAP_PREFIX + this.name);
@@ -281,7 +279,11 @@ public final class HazelcastCache implements Cache
     @Override
     public void close()
     {
-        if (this.listenerId != null) this.cache.removeEntryListener(this.listenerId);
+    	for (String listenerId : this.listenerIds)
+    	{
+    		this.cache.removeEntryListener(listenerId);
+    	}
+    	this.listenerIds.clear();
     }
 
     @Override

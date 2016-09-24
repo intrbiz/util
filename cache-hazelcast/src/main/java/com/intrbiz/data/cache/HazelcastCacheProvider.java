@@ -54,7 +54,6 @@ public class HazelcastCacheProvider implements CacheProvider
                     // add default config for cache maps
                     cacheMapConfig.setMaxIdleSeconds(1 * 60 * 60); /* Objects are removed if they are idle for 1 hour */
                     cacheMapConfig.setEvictionPolicy(EvictionPolicy.LRU);
-                    cacheMapConfig.setEvictionPercentage(25);
                     cacheMapConfig.setTimeToLiveSeconds(12 * 60 * 60); /* Objects are always refreshed every 12 hours */
                     cacheMapConfig.setBackupCount(0); /* We're a cache we don't care if we need to visit the backing store */
                     cacheMapConfig.setAsyncBackupCount(0); /* We're a cache we don't care if we need to visit the backing store */
