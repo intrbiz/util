@@ -35,8 +35,9 @@ public class IntrbizBootstrap
         // get our jar
         URL jar = findJar();
         if (jar == null) throw new RuntimeException("Failed to find JAR location");
-        File jarFile = new File(jar.getFile());
+        File jarFile = new File(jar.toURI());
         log("Using Jar: " + jar + " file=" + jarFile.getAbsolutePath() + " " + jarFile.exists());
+        if (! jarFile.exists()) throw new RuntimeException("Failed to get JAR file, name=" + jarFile.getAbsolutePath() + ", exists=" + jarFile.exists());
         // our working dir
         File workingDir = jarFile.getAbsoluteFile().getParentFile();
         log("Using working directory: " + workingDir.getAbsolutePath());
