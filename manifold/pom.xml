@@ -3,14 +3,14 @@
   <parent>
     <groupId>com.intrbiz.util</groupId>
     <artifactId>util</artifactId>
-    <version>1.2.1</version>
+    <version>1.2.2</version>
   </parent>
   <artifactId>manifold</artifactId>
   <dependencies>
   	<dependency>
   		<groupId>com.intrbiz.util</groupId>
   		<artifactId>queue</artifactId>
-  		<version>1.2.1</version>
+  		<version>1.2.2</version>
   	</dependency>
   </dependencies>
 </project>
