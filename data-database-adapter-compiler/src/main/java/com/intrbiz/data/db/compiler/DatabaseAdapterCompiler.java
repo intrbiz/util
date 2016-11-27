@@ -178,6 +178,12 @@ public class DatabaseAdapterCompiler
     }
 
     // schema
+    public String compileInstallSchemaToString(Class<? extends DatabaseAdapter> cls)
+    {
+        SQLScriptSet schema = this.compileInstallSchema(cls);
+        return schema.toString();
+    }
+    
     public SQLScriptSet compileInstallSchema(Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
@@ -409,10 +415,30 @@ public class DatabaseAdapterCompiler
     }
 
     // adapter class
+    
+    @SuppressWarnings("unchecked")
+    public <T extends DatabaseAdapter> DatabaseAdapterFactory<T> loadPrecompiledAdapterFactory(Class<T> cls)
+    {
+        String factoryClassName = cls.getPackage().getName() + "." + cls.getSimpleName() + "ImplFactory";
+        try
+        {
+            Class<?> precompiledFactoryClass = Class.forName(factoryClassName);
+            return (DatabaseAdapterFactory<T>) precompiledFactoryClass.newInstance();
+        }
+        catch (InstantiationException | IllegalAccessException | ClassNotFoundException e)
+        {
+            logger.info("Failed to load precompiled database adapter factory: " + factoryClassName);
+        }
+        return null;
+    }
 
     @SuppressWarnings("unchecked")
     public <T extends DatabaseAdapter> DatabaseAdapterFactory<T> compileAdapterFactory(Class<T> cls)
     {
+        // look for a precompiled factory first
+        DatabaseAdapterFactory<T> precompiled = this.loadPrecompiledAdapterFactory(cls);
+        if (precompiled != null)
+            return precompiled;
         // compile the actual adapter implementation
         Class<?> impl = this.compileAdapterImplementation(cls);
         // compile the factory
@@ -448,9 +474,31 @@ public class DatabaseAdapterCompiler
             throw new RuntimeException("Failed to create factory class", e);
         }
     }
-
-    public Class<?> compileAdapterImplementation(Class<? extends DatabaseAdapter> cls)
+    
+    @SuppressWarnings("unchecked")
+    public <T extends DatabaseAdapter> Class<T> loadPrecompiledAdapterImplementation(Class<T> cls)
     {
+        String implClassName = cls.getPackage().getName() + "." + cls.getSimpleName() + "Impl";
+        try
+        {
+            Class<?> precompiledImplClass = Class.forName(implClassName);
+            return (Class<T>) precompiledImplClass;
+        }
+        catch (ClassNotFoundException e)
+        {
+            logger.info("Failed to load precompiled database adapter implementation: " + implClassName);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends DatabaseAdapter> Class<T> compileAdapterImplementation(Class<T> cls)
+    {
+        // try the precompiled class first
+        Class<T> precompiled = this.loadPrecompiledAdapterImplementation(cls);
+        if (precompiled != null)
+            return precompiled;
+        // parse the schema
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
         // the implementation class
         JavaClass impl = new JavaClass(cls.getPackage().getName(), cls.getSimpleName() + "Impl");
@@ -504,7 +552,7 @@ public class DatabaseAdapterCompiler
         {
             Class<?> implCls = CompilerTool.getInstance().defineClass(impl);
             if (implCls == null) throw new RuntimeException("Failed to compile adapter implementation class");
-            return implCls;
+            return (Class<T>) implCls;
         }
         catch (ClassNotFoundException e)
         {

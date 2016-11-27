@@ -54,7 +54,7 @@ public final class CompilerTool
         //
         try
         {
-            this.base = Files.createTempDirectory("intrbiz-rt-classes-" + System.currentTimeMillis() + "-").toFile();
+            this.base = this.getCompilationDir();
             logger.trace("Using " + this.base + " as compilation directory");
             // set the output directory
             this.fileManager.setLocation(StandardLocation.CLASS_OUTPUT, Arrays.asList(new File[] { this.base }));
@@ -85,6 +85,21 @@ public final class CompilerTool
         {
             logger.error("Failed to setup temporary compilation directory", e);
         }
+    }
+    
+    private File getCompilationDir() throws IOException
+    {
+        // look for a configured compilation directory
+        String runtimeTarget = System.getProperty("intrbiz.runtime.target");
+        if (runtimeTarget != null && runtimeTarget.length() > 0)
+        {
+            File target = new File(runtimeTarget);
+            if (target.exists() && target.isDirectory())
+                return target;
+            logger.warn("The given compilation directory (intrbiz.runtime.target) does not exist or is not a directory, using default");
+        }
+        // default to a renerated temp path
+        return Files.createTempDirectory("intrbiz-rt-classes-" + System.currentTimeMillis() + "-").toFile();
     }
 
     public void appendClassPath(File... paths)
