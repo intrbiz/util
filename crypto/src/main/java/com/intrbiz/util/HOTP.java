@@ -33,6 +33,15 @@ public abstract class HOTP<T extends HOTPState>
     }
     
     /**
+     * Set the number of iterations of OTP we can look forward and consider it a valid token
+     * @param limit the lookahead limit
+     */
+    public void setLookaheadLimit(long limit)
+    {
+        this.lookaheadLimit = limit;
+    }
+    
+    /**
      * Generate a new OTP secret
      */
     public HOTPSecret newOTPSecret()
