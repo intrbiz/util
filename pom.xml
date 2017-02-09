@@ -98,6 +98,7 @@
         <module>scripting</module>
         <module>manifold</module>
         <module>data-database-adapter-compiler-plugin</module>
+        <module>pgq</module>
 	</modules>
 	<dependencyManagement>
 		<dependencies>
