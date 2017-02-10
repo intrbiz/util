@@ -7,6 +7,7 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 
 import javax.script.Bindings;
+import javax.script.Invocable;
 import javax.script.ScriptContext;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineFactory;
@@ -15,7 +16,7 @@ import javax.script.ScriptException;
 /**
  * Execute a ScriptEngine with restricted permissions
  */
-public class RestrictedScriptEngine implements ScriptEngine
+public class RestrictedScriptEngine implements ScriptEngine, Invocable
 {
     private ScriptEngine engine;
 
@@ -40,8 +41,7 @@ public class RestrictedScriptEngine implements ScriptEngine
                 {
                     return engine.eval(script, context);
                 }
-            }, 
-            this.context);
+            }, this.context);
         }
         catch (PrivilegedActionException e)
         {
@@ -61,8 +61,7 @@ public class RestrictedScriptEngine implements ScriptEngine
                 {
                     return engine.eval(reader, context);
                 }
-            }, 
-            this.context);
+            }, this.context);
         }
         catch (PrivilegedActionException e)
         {
@@ -82,8 +81,7 @@ public class RestrictedScriptEngine implements ScriptEngine
                 {
                     return engine.eval(script);
                 }
-            }, 
-            this.context);
+            }, this.context);
         }
         catch (PrivilegedActionException e)
         {
@@ -103,8 +101,7 @@ public class RestrictedScriptEngine implements ScriptEngine
                 {
                     return engine.eval(reader);
                 }
-            }, 
-            this.context);
+            }, this.context);
         }
         catch (PrivilegedActionException e)
         {
@@ -124,8 +121,7 @@ public class RestrictedScriptEngine implements ScriptEngine
                 {
                     return engine.eval(script, n);
                 }
-            }, 
-            this.context);
+            }, this.context);
         }
         catch (PrivilegedActionException e)
         {
@@ -145,12 +141,91 @@ public class RestrictedScriptEngine implements ScriptEngine
                 {
                     return engine.eval(reader, n);
                 }
-            }, 
-            this.context);
+            }, this.context);
         }
         catch (PrivilegedActionException e)
         {
             throw e.getCause() instanceof ScriptException ? (ScriptException) e.getCause() : new ScriptException(e);
+        }
+    }
+
+    @Override
+    public Object invokeMethod(final Object thiz, final String name, final Object... args) throws ScriptException, NoSuchMethodException
+    {
+        try
+        {
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<Object>()
+            {
+                @Override
+                public Object run() throws Exception
+                {
+                    return ((Invocable) engine).invokeMethod(thiz, name, args);
+                }
+            }, this.context);
+        }
+        catch (PrivilegedActionException e)
+        {
+            throw e.getCause() instanceof ScriptException ? (ScriptException) e.getCause() : new ScriptException(e);
+        }
+    }
+
+    @Override
+    public Object invokeFunction(final String name, final Object... args) throws ScriptException, NoSuchMethodException
+    {
+        try
+        {
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<Object>()
+            {
+                @Override
+                public Object run() throws Exception
+                {
+                    return ((Invocable) engine).invokeFunction(name, args);
+                }
+            }, this.context);
+        }
+        catch (PrivilegedActionException e)
+        {
+            throw e.getCause() instanceof ScriptException ? (ScriptException) e.getCause() : new ScriptException(e);
+        }
+    }
+
+    @Override
+    public <T> T getInterface(final Class<T> clasz)
+    {
+        try
+        {
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<T>()
+            {
+                @Override
+                public T run() throws Exception
+                {
+                    return ((Invocable) engine).getInterface(clasz);
+                }
+            }, this.context);
+        }
+        catch (PrivilegedActionException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public <T> T getInterface(final Object thiz, final Class<T> clasz)
+    {
+        try
+        {
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<T>()
+            {
+                @Override
+                public T run() throws Exception
+                {
+                    return ((Invocable) engine).getInterface(thiz, clasz);
+                }
+            }, this.context);
+        }
+        catch (PrivilegedActionException e)
+        {
+            throw new RuntimeException(e);
         }
     }
 

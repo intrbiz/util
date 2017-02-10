@@ -4,16 +4,19 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Timestamp;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import org.apache.log4j.Logger;
 
 import com.intrbiz.util.pool.database.DatabasePool;
 
 public abstract class PGQ<T> implements Runnable
-{
+{   
+    private static final Logger logger = Logger.getLogger(PGQ.class);
+    
     protected final DatabasePool pool;
-
-    protected final Class<?>[] eventTypes;
 
     protected final String queueName;
 
@@ -25,14 +28,13 @@ public abstract class PGQ<T> implements Runnable
 
     protected long pollDelay;
 
-    public PGQ(DatabasePool pool, String queueName, String consumerName, Class<?>[] eventTypes)
+    public PGQ(DatabasePool pool, String queueName, String consumerName)
     {
         super();
         this.pollDelay = 5_000;
         this.pool = pool;
         this.queueName = queueName;
         this.consumerName = consumerName;
-        this.eventTypes = eventTypes;
     }
 
     public void newConsumer(PGQConsumer<T> consumer)
@@ -89,95 +91,104 @@ public abstract class PGQ<T> implements Runnable
     {
         return new PGQProducer<T>()
         {
-            public void put(T event)
+            public void put(T event) throws PGQueueException
             {
-                if (event == null) throw new NullPointerException("Cannot put a null event!");
-                // Encode the event to a string
-                String eventType = event.getClass().getName();
+                Objects.requireNonNull(event, "Event cannot be null");
+                this.put(PGQ.this.toEventType(event), event, null, null, null, null);
+            }
+            
+            public void put(String type, T event, String extra1, String extra2, String extra3, String extra4) throws PGQueueException
+            {
+                Objects.requireNonNull(event, "Event cannot be null");
+                // Encode the event
                 String eventData = PGQ.this.encodeEvent(event);
                 // Connect to the database
                 try (Connection con = PGQ.this.pool.connect())
                 {
-                    try (PreparedStatement stmt = con.prepareStatement("SELECT pgq.insert_event(?::TEXT, ?::TEXT, ?::TEXT)"))
+                    try (PreparedStatement stmt = con.prepareStatement("SELECT pgq.insert_event(?::TEXT, ?::TEXT, ?::TEXT, ?::TEXT, ?::TEXT, ?::TEXT, ?::TEXT)"))
                     {
                         stmt.setString(1, PGQ.this.queueName);
-                        stmt.setString(2, eventType);
+                        stmt.setString(2, type);
                         stmt.setString(3, eventData);
+                        stmt.setString(4, extra1);
+                        stmt.setString(5, extra2);
+                        stmt.setString(6, extra3);
+                        stmt.setString(7, extra4);
                         stmt.execute();
                     }
                 }
                 catch (Exception e)
                 {
-                    e.printStackTrace();
+                    throw new PGQueueException("Failed to insert event onto PGQ", e);
                 }
             }
         };
     }
+    
+    protected abstract String toEventType(T event) throws PGQueueException;
 
-    protected abstract String encodeEvent(T event);
+    protected abstract String encodeEvent(T event) throws PGQueueException;
 
-    protected abstract T decodeEvent(Class<? extends T> type, String data);
+    protected abstract T decodeEvent(String eventType, String data) throws PGQueueException;
 
     protected boolean consumeEvents()
     {
-        // Connect to the DB
+        // Connect to the DBdecodeEvent
         try (Connection con = this.pool.connect())
         {
+            long batchId = this.nextBatch(con);
+            // no events to process so lets have a nap
+            if (batchId < 1) return true;
+            // fetch the batch events
             try
             {
-                long batchId = this.nextBatch(con);
-                // no events to process so lets have a nap
-                if (batchId < 1) return true;
-                // fetch the batch events
-                try
-                {
-                    this.consumeBatch(con, batchId);
-                    // successfully processed a batch of events
-                    return false;
-                }
-                finally
-                {
-                    // finish the batch
-                    this.finishBatch(con, batchId);
-                }
+                this.consumeBatch(con, batchId);
+                // successfully processed a batch of events
+                return false;
             }
             finally
             {
-                // TODO temporary bodge
-                this.doTick(con);
+                // finish the batch
+                this.finishBatch(con, batchId);
             }
         }
         catch (Exception e)
         {
-            e.printStackTrace();
+            logger.error("Error consuming events", e);
         }
         return true;
     }
 
-    @SuppressWarnings("unchecked")
     protected void consumeBatch(Connection con, long batchId) throws Exception
     {
-        try (PreparedStatement stmt = con.prepareStatement("SELECT ev_time, ev_type, ev_data FROM pgq.get_batch_events(?::BIGINT)"))
+        try (PreparedStatement stmt = con.prepareStatement("SELECT ev_id, ev_time, ev_txid, ev_retry, ev_type, ev_data, ev_extra1, ev_extra2, ev_extra3, ev_extra4 FROM pgq.get_batch_events(?::BIGINT)"))
         {
             stmt.setLong(1, batchId);
             try (ResultSet rs = stmt.executeQuery())
             {
                 while (rs.next())
                 {
-                    Timestamp evTime = rs.getTimestamp(1);
-                    Class<? extends T> evClass = (Class<? extends T>) Class.forName(rs.getString(2));
-                    String evData = rs.getString(3);
+                    long evId = rs.getLong(1);
+                    Timestamp evTime = rs.getTimestamp(2);
+                    long txId = rs.getLong(3);
+                    int retry = rs.getInt(4);
+                    String evType = rs.getString(5);
+                    String evData = rs.getString(6);
+                    String extra1 = rs.getString(7);
+                    String extra2 = rs.getString(8);
+                    String extra3 = rs.getString(9);
+                    String extra4 = rs.getString(10);
                     // decode the event
-                    T event = this.decodeEvent(evClass, evData);
+                    T event = this.decodeEvent(evType, evData);
                     // consume the event
                     try
                     {
-                        this.consumeEvent(new EventContainer<T>(this, evTime, evClass, event));
+                        this.consumeEvent(new EventContainer<T>(this, evId, evTime, txId, retry, evType, event, extra1, extra2, extra3, extra4));
                     }
                     catch (Exception e)
                     {
-                        e.printStackTrace();
-                        // TODO fail the event
+                        logger.error("Failed to consume event", e);
+                        // TODO: fail queue
                     }
                 }
             }
@@ -214,15 +225,6 @@ public abstract class PGQ<T> implements Runnable
         try (PreparedStatement stmt = con.prepareStatement("SELECT pgq.finish_batch(?::BIGINT)"))
         {
             stmt.setLong(1, batchId);
-            stmt.execute();
-        }
-    }
-
-    protected void doTick(Connection con) throws Exception
-    {
-        try (PreparedStatement stmt = con.prepareStatement("SELECT pgq.ticker(?::TEXT)"))
-        {
-            stmt.setString(1, this.queueName);
             stmt.execute();
         }
     }

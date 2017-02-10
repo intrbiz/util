@@ -50,10 +50,13 @@ import com.intrbiz.data.db.compiler.util.SQLScriptSet;
 import com.intrbiz.data.db.util.DBUtil;
 import com.intrbiz.express.DefaultContext;
 import com.intrbiz.express.operator.Add;
+import com.intrbiz.express.operator.ConcatOperator;
 import com.intrbiz.express.operator.Entity;
 import com.intrbiz.express.operator.MethodInvoke;
 import com.intrbiz.express.operator.Operator;
+import com.intrbiz.express.operator.PlainLiteral;
 import com.intrbiz.express.operator.StringLiteral;
+import com.intrbiz.express.operator.Wrapped;
 import com.intrbiz.express.value.ValueExpression;
 import com.intrbiz.gerald.source.IntelligenceSource;
 import com.intrbiz.gerald.witchcraft.Witchcraft;
@@ -66,6 +69,8 @@ import com.intrbiz.util.compiler.util.JavaUtil;
 
 public class DatabaseAdapterCompiler
 {
+    private static Logger logger = Logger.getLogger(DatabaseAdapterCompiler.class);
+    
     public static final DatabaseAdapterCompiler defaultPGSQLCompiler()
     {
         return new DatabaseAdapterCompiler(new PGSQLDialect());
@@ -173,6 +178,12 @@ public class DatabaseAdapterCompiler
     }
 
     // schema
+    public String compileInstallSchemaToString(Class<? extends DatabaseAdapter> cls)
+    {
+        SQLScriptSet schema = this.compileInstallSchema(cls);
+        return schema.toString();
+    }
+    
     public SQLScriptSet compileInstallSchema(Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
@@ -404,10 +415,30 @@ public class DatabaseAdapterCompiler
     }
 
     // adapter class
+    
+    @SuppressWarnings("unchecked")
+    public <T extends DatabaseAdapter> DatabaseAdapterFactory<T> loadPrecompiledAdapterFactory(Class<T> cls)
+    {
+        String factoryClassName = cls.getPackage().getName() + "." + cls.getSimpleName() + "ImplFactory";
+        try
+        {
+            Class<?> precompiledFactoryClass = Class.forName(factoryClassName);
+            return (DatabaseAdapterFactory<T>) precompiledFactoryClass.newInstance();
+        }
+        catch (InstantiationException | IllegalAccessException | ClassNotFoundException e)
+        {
+            logger.info("Failed to load precompiled database adapter factory: " + factoryClassName);
+        }
+        return null;
+    }
 
     @SuppressWarnings("unchecked")
     public <T extends DatabaseAdapter> DatabaseAdapterFactory<T> compileAdapterFactory(Class<T> cls)
     {
+        // look for a precompiled factory first
+        DatabaseAdapterFactory<T> precompiled = this.loadPrecompiledAdapterFactory(cls);
+        if (precompiled != null)
+            return precompiled;
         // compile the actual adapter implementation
         Class<?> impl = this.compileAdapterImplementation(cls);
         // compile the factory
@@ -443,9 +474,31 @@ public class DatabaseAdapterCompiler
             throw new RuntimeException("Failed to create factory class", e);
         }
     }
-
-    public Class<?> compileAdapterImplementation(Class<? extends DatabaseAdapter> cls)
+    
+    @SuppressWarnings("unchecked")
+    public <T extends DatabaseAdapter> Class<T> loadPrecompiledAdapterImplementation(Class<T> cls)
     {
+        String implClassName = cls.getPackage().getName() + "." + cls.getSimpleName() + "Impl";
+        try
+        {
+            Class<?> precompiledImplClass = Class.forName(implClassName);
+            return (Class<T>) precompiledImplClass;
+        }
+        catch (ClassNotFoundException e)
+        {
+            logger.info("Failed to load precompiled database adapter implementation: " + implClassName);
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends DatabaseAdapter> Class<T> compileAdapterImplementation(Class<T> cls)
+    {
+        // try the precompiled class first
+        Class<T> precompiled = this.loadPrecompiledAdapterImplementation(cls);
+        if (precompiled != null)
+            return precompiled;
+        // parse the schema
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
         // the implementation class
         JavaClass impl = new JavaClass(cls.getPackage().getName(), cls.getSimpleName() + "Impl");
@@ -499,7 +552,7 @@ public class DatabaseAdapterCompiler
         {
             Class<?> implCls = CompilerTool.getInstance().defineClass(impl);
             if (implCls == null) throw new RuntimeException("Failed to compile adapter implementation class");
-            return implCls;
+            return (Class<T>) implCls;
         }
         catch (ClassNotFoundException e)
         {
@@ -577,13 +630,28 @@ public class DatabaseAdapterCompiler
     
     public static String compileCacheInvalidationExpression(Operator op, java.util.function.Function<String, String> lookupColumn)
     {
+        if (logger.isTraceEnabled()) logger.trace("Compiling cache invalidation: " + op.getClass() + " " + op);
         StringBuilder sb = new StringBuilder();
-        if (op instanceof Add)
+        if (op instanceof ConcatOperator)
         {
-            Add a = (Add) op;
-            sb.append(compileCacheInvalidationExpression(a.getLeft(), lookupColumn));
-            sb.append(" + ");
-            sb.append(compileCacheInvalidationExpression(a.getRight(), lookupColumn));
+            boolean ns = false;
+            for (Operator child : ((ConcatOperator) op).getOperators())
+            {
+                if (ns) sb.append(" + ");
+                sb.append(compileCacheInvalidationExpression(child, lookupColumn));
+                ns = true;
+            }
+        }
+        else if (op instanceof Wrapped)
+        {
+            return compileCacheInvalidationExpression(((Wrapped) op).getOperator(), lookupColumn);
+        }
+        else if (op instanceof PlainLiteral)
+        {
+            PlainLiteral s = (PlainLiteral) op;
+            sb.append("\"");
+            sb.append(JavaUtil.escapeString(s.getValue()));
+            sb.append("\"");
         }
         else if (op instanceof StringLiteral)
         {
@@ -591,6 +659,13 @@ public class DatabaseAdapterCompiler
             sb.append("\"");
             sb.append(JavaUtil.escapeString(s.getValue()));
             sb.append("\"");
+        }
+        else if (op instanceof Add)
+        {
+            Add a = (Add) op;
+            sb.append(compileCacheInvalidationExpression(a.getLeft(), lookupColumn));
+            sb.append(" + ");
+            sb.append(compileCacheInvalidationExpression(a.getRight(), lookupColumn));
         }
         else if (op instanceof MethodInvoke)
         {
@@ -612,7 +687,7 @@ public class DatabaseAdapterCompiler
             Entity e = (Entity) op;
             sb.append(lookupColumn.apply(e.getValue()));
         }
-        //
+        if (logger.isTraceEnabled()) logger.trace(" to -> " + sb.toString());
         return sb.toString();
     }
 

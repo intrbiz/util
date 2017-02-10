@@ -1,6 +1,5 @@
 package com.intrbiz.queue.pgq;
 
-
 public interface PGQConsumer<T>
 {
     String getName();
