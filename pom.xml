@@ -116,7 +116,7 @@
 			<dependency>
 				<groupId>com.hazelcast</groupId>
 				<artifactId>hazelcast</artifactId>
-				<version>[3.4,)</version>
+				<version>[3.8,)</version>
 			</dependency>
 			<dependency>
 				<groupId>log4j</groupId>
@@ -213,6 +213,11 @@
 				<groupId>com.intrbiz.util</groupId>
 				<artifactId>data-database-adapter-compiler</artifactId>
 				<version>${project.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.hazelcast</groupId>
+				<artifactId>hazelcast-aws</artifactId>
+				<version>[1.1,)</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

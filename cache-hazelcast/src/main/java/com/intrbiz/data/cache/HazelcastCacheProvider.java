@@ -1,13 +1,14 @@
 package com.intrbiz.data.cache;
 
 import com.hazelcast.config.Config;
+import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
-import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
+import com.intrbiz.Util;
 import com.intrbiz.data.DataException;
 import com.intrbiz.data.DataManager.CacheProvider;
 
@@ -39,7 +40,7 @@ public class HazelcastCacheProvider implements CacheProvider
             if (config == null)
             {
                 // setup config
-                String hazelcastConfigFile = System.getProperty("hazelcast.config");
+                String hazelcastConfigFile = Util.coalesceEmpty(System.getProperty("hazelcast.config"), System.getenv("hazelcast.config"));
                 if (hazelcastConfigFile != null)
                 {
                     // when using a config file, you should configure the intrbiz.cache. maps
