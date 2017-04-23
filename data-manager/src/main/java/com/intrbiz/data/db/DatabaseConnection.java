@@ -296,7 +296,7 @@ public class DatabaseConnection implements AutoCloseable
     /**
      * Internal helper, nothing to see here
      */
-    public String getDatabaseModuleName(final String sql)
+    public String getDatabaseModuleNameOrVersion(final String sql, boolean quiet) throws DataException
     {
         try
         {
@@ -317,16 +317,42 @@ public class DatabaseConnection implements AutoCloseable
         }
         catch (DataException e)
         {
+            if (! quiet) 
+                throw e;
         }
         return null;
+    }
+    
+    /**
+     * Internal helper, nothing to see here
+     */
+    public String getDatabaseModuleName(final String sql) throws DataException
+    {
+       return this.getDatabaseModuleNameOrVersion(sql, false);
     }
 
     /**
      * Internal helper, nothing to see here
      */
-    public String getDatabaseModuleVersion(final String sql)
+    public String getDatabaseModuleVersion(final String sql) throws DataException
     {
-        return this.getDatabaseModuleName(sql);
+        return this.getDatabaseModuleNameOrVersion(sql, false);
+    }
+    
+    /**
+     * Internal helper, nothing to see here
+     */
+    public String getDatabaseModuleNameQuiet(final String sql) throws DataException
+    {
+       return this.getDatabaseModuleNameOrVersion(sql, true);
+    }
+
+    /**
+     * Internal helper, nothing to see here
+     */
+    public String getDatabaseModuleVersionQuiet(final String sql) throws DataException
+    {
+        return this.getDatabaseModuleNameOrVersion(sql, true);
     }
 
     /**

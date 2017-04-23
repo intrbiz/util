@@ -315,14 +315,14 @@ public class DatabaseAdapterCompiler
     public boolean isSchemaInstalled(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
-        String installedName = database.getDatabaseModuleName(this.dialect.getSchemaNameQuery(schema));
+        String installedName = database.getDatabaseModuleNameQuiet(this.dialect.getSchemaNameQuery(schema));
         return installedName != null;
     }
 
     public Version getInstalledVersion(DatabaseConnection database, Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
-        String installedVersion = database.getDatabaseModuleVersion(this.dialect.getSchemaVersionQuery(schema));
+        String installedVersion = database.getDatabaseModuleVersionQuiet(this.dialect.getSchemaVersionQuery(schema));
         return installedVersion == null ? null : new Version(installedVersion);
     }
 
