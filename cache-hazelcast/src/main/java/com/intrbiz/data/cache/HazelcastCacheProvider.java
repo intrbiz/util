@@ -43,12 +43,10 @@ public class HazelcastCacheProvider implements CacheProvider
                 String hazelcastConfigFile = Util.coalesceEmpty(System.getProperty("hazelcast.config"), System.getenv("hazelcast_config"));
                 if (hazelcastConfigFile != null)
                 {
-                    // when using a config file, you should configure the intrbiz.cache. maps
                     config = new XmlConfigBuilder(hazelcastConfigFile).build();
                 }
                 else
                 {
-                    // setup the default configuration
                     config = new Config();
                 }
                 // add update configuration for our maps
