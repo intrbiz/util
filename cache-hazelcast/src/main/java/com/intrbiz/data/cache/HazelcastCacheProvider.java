@@ -50,26 +50,26 @@ public class HazelcastCacheProvider implements CacheProvider
                 {
                     // setup the default configuration
                     config = new Config();
-                    // add update configuration for our maps
-                    MapConfig cacheMapConfig = config.getMapConfig(HazelcastCacheProvider.MAP_PREFIX + "*");
-                    // add default config for cache maps
-                    cacheMapConfig.setMaxIdleSeconds(1 * 60 * 60); /* Objects are removed if they are idle for 1 hour */
-                    cacheMapConfig.setEvictionPolicy(EvictionPolicy.LRU);
-                    cacheMapConfig.setTimeToLiveSeconds(12 * 60 * 60); /* Objects are always refreshed every 12 hours */
-                    cacheMapConfig.setBackupCount(0); /* We're a cache we don't care if we need to visit the backing store */
-                    cacheMapConfig.setAsyncBackupCount(0); /* We're a cache we don't care if we need to visit the backing store */
-                    cacheMapConfig.setInMemoryFormat(InMemoryFormat.OBJECT); /* Store the objects in object form, we want retrival to be fast and consitent */
-                    // setup nearline cache
-                    NearCacheConfig cacheMapNLConfig = new NearCacheConfig();
-                    cacheMapNLConfig.setCacheLocalEntries(false);
-                    cacheMapNLConfig.setEvictionPolicy("LRU");
-                    cacheMapNLConfig.setInMemoryFormat(InMemoryFormat.OBJECT);
-                    cacheMapNLConfig.setInvalidateOnChange(true);
-                    cacheMapNLConfig.setMaxIdleSeconds(10 * 60); /* 10 minute idle time */
-                    cacheMapNLConfig.setTimeToLiveSeconds(1 * 60 * 60); /* 1 hour TTL */
-                    cacheMapConfig.setNearCacheConfig(cacheMapNLConfig);
-                    config.addMapConfig(cacheMapConfig);
                 }
+                // add update configuration for our maps
+                MapConfig cacheMapConfig = config.getMapConfig(HazelcastCacheProvider.MAP_PREFIX + "*");
+                // add default config for cache maps
+                cacheMapConfig.setMaxIdleSeconds(1 * 60 * 60); /* Objects are removed if they are idle for 1 hour */
+                cacheMapConfig.setEvictionPolicy(EvictionPolicy.LRU);
+                cacheMapConfig.setTimeToLiveSeconds(12 * 60 * 60); /* Objects are always refreshed every 12 hours */
+                cacheMapConfig.setBackupCount(0); /* We're a cache we don't care if we need to visit the backing store */
+                cacheMapConfig.setAsyncBackupCount(0); /* We're a cache we don't care if we need to visit the backing store */
+                cacheMapConfig.setInMemoryFormat(InMemoryFormat.OBJECT); /* Store the objects in object form, we want retrival to be fast and consitent */
+                // setup nearline cache
+                NearCacheConfig cacheMapNLConfig = new NearCacheConfig();
+                cacheMapNLConfig.setCacheLocalEntries(false);
+                cacheMapNLConfig.setEvictionPolicy("LRU");
+                cacheMapNLConfig.setInMemoryFormat(InMemoryFormat.OBJECT);
+                cacheMapNLConfig.setInvalidateOnChange(true);
+                cacheMapNLConfig.setMaxIdleSeconds(10 * 60); /* 10 minute idle time */
+                cacheMapNLConfig.setTimeToLiveSeconds(1 * 60 * 60); /* 1 hour TTL */
+                cacheMapConfig.setNearCacheConfig(cacheMapNLConfig);
+                config.addMapConfig(cacheMapConfig);
             }
             // create the hazel cast instance
             if (instanceName == null)
