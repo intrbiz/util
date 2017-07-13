@@ -8,4 +8,6 @@ public interface QueueBrokerPool<T>
     T connect();
     
     void close();
+    
+    String type();
 }

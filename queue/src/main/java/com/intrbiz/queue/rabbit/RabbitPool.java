@@ -21,6 +21,8 @@ import com.rabbitmq.client.ShutdownSignalException;
 
 public class RabbitPool implements QueueBrokerPool<Channel>
 {
+    public static final String TYPE = "rabbitmq";
+    
     private ConnectionFactory factory;
 
     private volatile Connection currentConnection;
@@ -126,5 +128,11 @@ public class RabbitPool implements QueueBrokerPool<Channel>
                 }
             }
         }
+    }
+    
+    @Override
+    public String type()
+    {
+        return TYPE;
     }
 }
