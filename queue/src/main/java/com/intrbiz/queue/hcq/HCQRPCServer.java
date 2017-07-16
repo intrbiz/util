@@ -31,8 +31,10 @@ public class HCQRPCServer<T, R> extends HCQBase<T> implements RPCServer<T, R>
     private Queue requestQueue;
     
     private final QueueEventTranscoder<R> responseTranscoder;
+    
+    private final int capacity;
 
-    public HCQRPCServer(QueueBrokerPool<HCQClient> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, RPCHandler<T,R> handler, Queue requestQueue, Exchange exchange, RoutingKey... bindings)
+    public HCQRPCServer(QueueBrokerPool<HCQClient> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, RPCHandler<T,R> handler, Queue requestQueue, int capacity, Exchange exchange, RoutingKey... bindings)
     {
         super(broker, transcoder);
         this.responseTranscoder = responseTranscoder;
@@ -40,6 +42,7 @@ public class HCQRPCServer<T, R> extends HCQBase<T> implements RPCServer<T, R>
         this.requestQueueSpec = requestQueue;
         this.exchange = exchange;
         this.bindings = bindings;
+        this.capacity = capacity;
         this.init();
     }
 
@@ -51,13 +54,13 @@ public class HCQRPCServer<T, R> extends HCQBase<T> implements RPCServer<T, R>
         {
             // declare a temporary queue
             this.requestQueue = new Queue("rpc-server-" + UUID.randomUUID(), false);
-            batch.getOrCreateTempQueue(this.requestQueue.getName());
+            batch.getOrCreateTempQueue(this.requestQueue.getName(), this.capacity);
         }
         else
         {
             // use the name given
             this.requestQueue = this.requestQueueSpec;
-            batch.getOrCreateQueue(this.requestQueue.getName(), ! this.requestQueue.isPersistent());
+            batch.getOrCreateQueue(this.requestQueue.getName(), this.capacity, ! this.requestQueue.isPersistent());
         }
         // declare the exchange
         batch.getOrCreateExchange(this.exchange.getName(), this.exchange.getType());

@@ -43,7 +43,9 @@ public class HCQRPCClient<T, R, K extends RoutingKey> extends HCQBase<T> impleme
     
     private final QueueEventTranscoder<R> responseTranscoder;
     
-    public HCQRPCClient(QueueBrokerPool<HCQClient> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, Exchange exchange, K defaultKey, long timeout)
+    private int capacity;
+    
+    public HCQRPCClient(QueueBrokerPool<HCQClient> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, Exchange exchange, K defaultKey, long timeout, int capacity)
     {
         super(broker, transcoder);
         this.responseTranscoder = responseTranscoder;
@@ -52,21 +54,27 @@ public class HCQRPCClient<T, R, K extends RoutingKey> extends HCQBase<T> impleme
         this.init();
         this.timeout = timeout;
         this.timer = new Timer();
+        this.capacity = capacity;
     }
     
-    public HCQRPCClient(QueueBrokerPool<HCQClient> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, Exchange exchange, K defaultKey)
+    public HCQRPCClient(QueueBrokerPool<HCQClient> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, Exchange exchange, K defaultKey, int capacity)
     {
-        this(broker, transcoder, responseTranscoder, exchange, defaultKey, TimeUnit.SECONDS.toMillis(10));
+        this(broker, transcoder, responseTranscoder, exchange, defaultKey, TimeUnit.SECONDS.toMillis(10), capacity);
     }
     
-    public HCQRPCClient(QueueBrokerPool<HCQClient> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, Exchange exchange)
+    public HCQRPCClient(QueueBrokerPool<HCQClient> broker, QueueEventTranscoder<T> transcoder, QueueEventTranscoder<R> responseTranscoder, Exchange exchange, int capacity)
     {
-        this(broker, transcoder, responseTranscoder, exchange, null);
+        this(broker, transcoder, responseTranscoder, exchange, null, capacity);
     }
     
     public final K defaultKey()
     {
         return this.defaultKey;
+    }
+    
+    public int getCapacity()
+    {
+        return this.capacity;
     }
     
     protected void setup() throws Exception
@@ -76,7 +84,7 @@ public class HCQRPCClient<T, R, K extends RoutingKey> extends HCQBase<T> impleme
         batch.getOrCreateExchange(this.exchange.getName(), this.exchange.getType());
         // declare our temporary queue
         this.replyQueue = new Queue("rpc-client-" + UUID.randomUUID(), false);
-        batch.getOrCreateQueue(this.replyQueue.getName(), ! this.replyQueue.isPersistent());
+        batch.getOrCreateQueue(this.replyQueue.getName(), this.capacity, ! this.replyQueue.isPersistent());
         // submit the batch
         batch.submit().sync();
         // consume responses
