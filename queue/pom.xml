@@ -48,9 +48,8 @@
 			<artifactId>log4j</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.intrbiz.hcqb</groupId>
-			<artifactId>hcqb-client</artifactId>
-			<version>0.0.1-SNAPSHOT</version>
+			<groupId>com.intrbiz.hcq</groupId>
+			<artifactId>hcq-client</artifactId>
 		</dependency>
 	</dependencies>
 
