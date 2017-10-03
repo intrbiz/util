@@ -15,4 +15,5 @@ public @interface SQLGetter
     SQLOrder[] orderBy() default {};
     SQLQuery[] query() default {};
     SQLVersion since();
+    SQLUserDefined[] userDefined() default {};
 }

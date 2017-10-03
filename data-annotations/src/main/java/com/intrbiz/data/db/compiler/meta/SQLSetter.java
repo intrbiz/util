@@ -13,4 +13,5 @@ public @interface SQLSetter {
     Class<?> table();
     boolean upsert() default true;
     SQLVersion since();
+    SQLUserDefined[] userDefined() default {};
 }

@@ -6,12 +6,14 @@ import java.lang.reflect.Method;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.introspector.SQLIntrospector;
 import com.intrbiz.data.db.compiler.meta.SQLSetter;
+import com.intrbiz.data.db.compiler.meta.SQLUserDefined;
 import com.intrbiz.data.db.compiler.model.Argument;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.function.SetterInfo;
+import com.intrbiz.data.db.compiler.util.UserDefinedUtil;
 
 public class SetterIntrospector implements SQLFunctionIntrospector
 {
@@ -41,6 +43,11 @@ public class SetterIntrospector implements SQLFunctionIntrospector
             Argument arg = new Argument(idx++, col.getName(), col.getType(), col.getDefinition().getType());
             arg.setShadowOf(col);
             function.addArgument(arg);
+        }
+        // user defined
+        for (SQLUserDefined user : setter.userDefined())
+        {
+            info.addUserDefined(user.dialect(), UserDefinedUtil.buildSQL(cls, user));
         }
         //
         return function;

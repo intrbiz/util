@@ -13,6 +13,7 @@ import com.intrbiz.data.db.compiler.meta.SQLOffset;
 import com.intrbiz.data.db.compiler.meta.SQLOrder;
 import com.intrbiz.data.db.compiler.meta.SQLParam;
 import com.intrbiz.data.db.compiler.meta.SQLQuery;
+import com.intrbiz.data.db.compiler.meta.SQLUserDefined;
 import com.intrbiz.data.db.compiler.model.Argument;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.Function;
@@ -21,6 +22,7 @@ import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
 import com.intrbiz.data.db.compiler.model.function.GetterInfo;
+import com.intrbiz.data.db.compiler.util.UserDefinedUtil;
 
 public class GetterIntrospector implements SQLFunctionIntrospector
 {
@@ -95,6 +97,11 @@ public class GetterIntrospector implements SQLFunctionIntrospector
         for (SQLQuery query : getter.query())
         {
             info.addQuery(query.dialect(), query.value());
+        }
+        // user defined
+        for (SQLUserDefined user : getter.userDefined())
+        {
+            info.addUserDefined(user.dialect(), UserDefinedUtil.buildSQL(cls, user));
         }
         //
         return function;

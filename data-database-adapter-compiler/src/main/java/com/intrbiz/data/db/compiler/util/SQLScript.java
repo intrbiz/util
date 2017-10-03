@@ -7,8 +7,6 @@ import java.io.Reader;
 import java.util.LinkedList;
 import java.util.List;
 
-import com.intrbiz.data.DataAdapter;
-
 public class SQLScript
 {
     private List<SQLCommand> commands = new LinkedList<SQLCommand>();
@@ -63,7 +61,7 @@ public class SQLScript
         return sb.toString();
     }
     
-    public static final SQLScript fromResource(Class<? extends DataAdapter> adapterCls, String resourceName)
+    public static final SQLScript fromResource(Class<?> adapterCls, String resourceName)
     {
         try (Reader r = new BufferedReader(new InputStreamReader(adapterCls.getResourceAsStream(resourceName))))
         {

@@ -7,7 +7,7 @@ import java.util.Map;
 
 import com.intrbiz.data.db.compiler.model.Order;
 
-public class GetterInfo
+public class GetterInfo implements UserDefinedInfo
 {
     private boolean parameterised = false;
 
@@ -18,6 +18,8 @@ public class GetterInfo
     private List<Order> orderBy = new LinkedList<Order>();
     
     private Map<String, String> query = new HashMap<String, String>();
+    
+    private Map<String, String[]> userDefined = new HashMap<String, String[]>();
 
     public GetterInfo()
     {
@@ -94,5 +96,32 @@ public class GetterInfo
     public boolean hasQuery()
     {
         return ! this.query.isEmpty();
+    }
+
+    public Map<String, String[]> getUserDefined()
+    {
+        return userDefined;
+    }
+
+    public void setUserDefined(Map<String, String[]> userDefined)
+    {
+        this.userDefined = userDefined;
+    }
+    
+    public void addUserDefined(String dialect, String[] sql)
+    {
+        this.userDefined.put(dialect, sql);
+    }
+    
+    public String[] getUserDefined(String dialect)
+    {
+        String[] sql = this.userDefined.get(dialect);
+        if (sql == null) sql = this.userDefined.get("SQL");
+        return sql;
+    }
+    
+    public boolean hasUserDefined()
+    {
+        return ! this.userDefined.isEmpty();
     }
 }

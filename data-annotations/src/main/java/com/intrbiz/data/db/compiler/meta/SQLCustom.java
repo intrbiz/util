@@ -5,13 +5,16 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Don't do any funky auto generating shit,
+ * just exeucte the user defined SQL and run
+ * the user defined method
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 @SQLFunction()
-public @interface SQLRemove {
-    String name();
-    Class<?> table();
+public @interface SQLCustom
+{
     SQLVersion since();
-    SQLQuery[] query() default {};
     SQLUserDefined[] userDefined() default {};
 }

@@ -29,6 +29,7 @@ import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
 import com.intrbiz.data.db.compiler.model.Unique;
+import com.intrbiz.data.db.compiler.model.function.UserDefinedInfo;
 import com.intrbiz.data.db.compiler.util.SQLCommand;
 import com.intrbiz.data.db.compiler.util.SQLScript;
 
@@ -308,48 +309,60 @@ public class PGSQLDialect extends SQLDialect
     @Override
     public SQLScript writeCreateFunction(Function function)
     {
-        logger.trace("Creating functions " + function.getSchema().getName() + "." + function.getName());
-        //
-        SQLScript s = new SQLScript();
-        SQLCommand to = s.command();
-        to.write("CREATE OR REPLACE FUNCTION ").writeid(function.getSchema(), function.getName()).write("(");
-        boolean ns = false;
-        for (Argument arg : function.getArguments())
+        // user defined or generated?
+        if (function.getIntrospectionInformation() instanceof UserDefinedInfo && ((UserDefinedInfo) function.getIntrospectionInformation()).hasUserDefined())
         {
-            if (ns) to.write(", ");
-            to.writeid("p_" + arg.getName()).write(" ").write(arg.getType().getSQLType());
-            ns = true;
-        }
-        to.writeln(")");
-        to.write("RETURNS SETOF ");
-        if (function.getReturnType() == null)
-        {
-            // default to return int;
-            to.write("INTEGER");
+            logger.trace("Using user defined function " + function.getSchema().getName() + "." + function.getName());
+            String[] sql = ((UserDefinedInfo) function.getIntrospectionInformation()).getUserDefined(this.getDialectName());
+            if (sql == null || sql.length == 0) throw new RuntimeException("No user defined SQL provided for function " + function.getName() + " for dialect " + this.getDialectName() + " yet other there is SQL for other dialects");
+            // copy the definition
+            return new SQLScript(sql);
         }
         else
         {
-            to.write(function.getReturnType().getSQLType());
+            logger.trace("Creating function " + function.getSchema().getName() + "." + function.getName());
+            //
+            SQLScript s = new SQLScript();
+            SQLCommand to = s.command();
+            to.write("CREATE OR REPLACE FUNCTION ").writeid(function.getSchema(), function.getName()).write("(");
+            boolean ns = false;
+            for (Argument arg : function.getArguments())
+            {
+                if (ns) to.write(", ");
+                to.writeid("p_" + arg.getName()).write(" ").write(arg.getType().getSQLType());
+                ns = true;
+            }
+            to.writeln(")");
+            to.write("RETURNS SETOF ");
+            if (function.getReturnType() == null)
+            {
+                // default to return int;
+                to.write("INTEGER");
+            }
+            else
+            {
+                to.write(function.getReturnType().getSQLType());
+            }
+            to.writeln(" AS").writeln("$BODY$");
+            //
+            SQLFunctionGenerator generator = this.getFunctionGenerator(function.getFunctionType().annotationType());
+            if (generator != null) generator.writeCreateFunctionBody(this, to, function);
+            //
+            to.writeln("$BODY$");
+            to.write("LANGUAGE plpgsql");
+            
+            to = s.command();
+            to.write("ALTER FUNCTION ").writeid(function.getSchema(), function.getName()).write("(");
+            ns = false;
+            for (Argument arg : function.getArguments())
+            {
+                if (ns) to.write(", ");
+                to.write(arg.getType().getSQLType());
+                ns = true;
+            }
+            to.write(") OWNER TO ").write(this.getOwner());
+            return s;
         }
-        to.writeln(" AS").writeln("$BODY$");
-        //
-        SQLFunctionGenerator generator = this.getFunctionGenerator(function.getFunctionType().annotationType());
-        if (generator != null) generator.writeCreateFunctionBody(this, to, function);
-        //
-        to.writeln("$BODY$");
-        to.write("LANGUAGE plpgsql");
-        
-        to = s.command();
-        to.write("ALTER FUNCTION ").writeid(function.getSchema(), function.getName()).write("(");
-        ns = false;
-        for (Argument arg : function.getArguments())
-        {
-            if (ns) to.write(", ");
-            to.write(arg.getType().getSQLType());
-            ns = true;
-        }
-        to.write(") OWNER TO ").write(this.getOwner());
-        return s;
     }
     
     @Override

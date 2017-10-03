@@ -9,12 +9,14 @@ import com.intrbiz.data.db.compiler.introspector.SQLIntrospector;
 import com.intrbiz.data.db.compiler.meta.SQLParam;
 import com.intrbiz.data.db.compiler.meta.SQLQuery;
 import com.intrbiz.data.db.compiler.meta.SQLRemove;
+import com.intrbiz.data.db.compiler.meta.SQLUserDefined;
 import com.intrbiz.data.db.compiler.model.Argument;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.Function;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.function.RemoveInfo;
+import com.intrbiz.data.db.compiler.util.UserDefinedUtil;
 
 public class RemoveIntrospector implements SQLFunctionIntrospector
 {
@@ -63,6 +65,12 @@ public class RemoveIntrospector implements SQLFunctionIntrospector
         {
             info.addQuery(query.dialect(), query.value());
         }
+        // user defined
+        for (SQLUserDefined user : remove.userDefined())
+        {
+            info.addUserDefined(user.dialect(), UserDefinedUtil.buildSQL(cls, user));
+        }
+        //
         return function;
     }
 }

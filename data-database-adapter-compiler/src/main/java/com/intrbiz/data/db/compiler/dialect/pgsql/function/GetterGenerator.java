@@ -11,7 +11,7 @@ import com.intrbiz.data.db.compiler.model.function.GetterInfo;
 import com.intrbiz.data.db.compiler.util.SQLCommand;
 
 public class GetterGenerator implements SQLFunctionGenerator
-{
+{    
     @Override
     public void writeCreateFunctionBody(SQLDialect dialect, SQLCommand to, Function function)
     {

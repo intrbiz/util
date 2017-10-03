@@ -16,11 +16,13 @@ import com.intrbiz.data.cache.CacheInvalidate;
 import com.intrbiz.data.cache.Cacheable;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
+import com.intrbiz.data.db.compiler.introspector.function.CustomIntrospector;
 import com.intrbiz.data.db.compiler.introspector.function.GetterIntrospector;
 import com.intrbiz.data.db.compiler.introspector.function.RemoveIntrospector;
 import com.intrbiz.data.db.compiler.introspector.function.SQLFunctionIntrospector;
 import com.intrbiz.data.db.compiler.introspector.function.SetterIntrospector;
 import com.intrbiz.data.db.compiler.meta.SQLColumn;
+import com.intrbiz.data.db.compiler.meta.SQLCustom;
 import com.intrbiz.data.db.compiler.meta.SQLForeignKey;
 import com.intrbiz.data.db.compiler.meta.SQLFunction;
 import com.intrbiz.data.db.compiler.meta.SQLGetter;
@@ -66,6 +68,7 @@ public class SQLIntrospector
         this.registerFunctionIntrospector(SQLGetter.class, new GetterIntrospector());
         this.registerFunctionIntrospector(SQLSetter.class, new SetterIntrospector());
         this.registerFunctionIntrospector(SQLRemove.class, new RemoveIntrospector());
+        this.registerFunctionIntrospector(SQLCustom.class, new CustomIntrospector());
     }
 
     public void registerFunctionIntrospector(Class<? extends Annotation> type, SQLFunctionIntrospector introspector)
