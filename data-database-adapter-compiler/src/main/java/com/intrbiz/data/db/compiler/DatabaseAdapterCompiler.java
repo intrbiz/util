@@ -209,15 +209,23 @@ public class DatabaseAdapterCompiler
         {
             set.add(this.dialect.writeCreateType(type));
         }
-        //
+        // any table patches
+        for (Patch patch : schema.getPatches())
+        {
+            if ((ScriptType.INSTALL == patch.getType() || ScriptType.BOTH == patch.getType()) && patch.getVersion().isBeforeOrEqual(schema.getVersion()))
+            {
+                set.add(patch.getScript());
+            }
+        }
+        // load functions
         for (Function function : schema.getFunctions())
         {
             set.add(this.dialect.writeCreateFunction(function));
         }
-        // add any install patches for this version
+        // add any last install patches for this version
         for (Patch patch : schema.getPatches())
         {
-            if ((ScriptType.INSTALL == patch.getType() || ScriptType.BOTH == patch.getType()) && patch.getVersion().isBeforeOrEqual(schema.getVersion()))
+            if ((ScriptType.INSTALL_LAST == patch.getType() || ScriptType.BOTH_LAST == patch.getType()) && patch.getVersion().isBeforeOrEqual(schema.getVersion()))
             {
                 set.add(patch.getScript());
             }
@@ -308,6 +316,14 @@ public class DatabaseAdapterCompiler
         for (Function function : schema.getFunctions())
         {
             set.add(this.dialect.writeCreateFunction(function));
+        }
+        // run any late table / type upgrade scripts
+        for (Patch patch : schema.getPatches())
+        {
+            if ((ScriptType.UPGRADE_LAST == patch.getType() || ScriptType.BOTH_LAST == patch.getType()) && patch.getVersion().isAfter(installedVersion))
+            {
+                set.add(patch.getScript());
+            }
         }
         return set;
     }
