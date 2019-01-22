@@ -79,6 +79,8 @@ public class PGSQLDialect extends SQLDialect
     
     private static final SQLType TYPE_JSON = new SQLSimpleType("JSON", "String", String.class);
     
+    private static final SQLType TYPE_JSONB = new SQLSimpleType("JSONB", "String", String.class);
+    
     private static final SQLType TYPE_BYTEA = new SQLSimpleType("BYTEA", "Bytes", byte[].class);
 
     public PGSQLDialect()
@@ -153,6 +155,8 @@ public class PGSQLDialect extends SQLDialect
             return TYPE_JSON;
         else if ("BYTEA".equalsIgnoreCase(sqlType)) 
             return TYPE_BYTEA;
+        else if ("JSONB".equalsIgnoreCase(sqlType)) 
+            return TYPE_JSONB;
         throw new RuntimeException("The SQL type: " + sqlType + " is not supported");
     }
 

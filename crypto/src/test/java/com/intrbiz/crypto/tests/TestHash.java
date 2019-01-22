@@ -50,4 +50,10 @@ public class TestHash
         assertThat(hash, is(notNullValue()));
         assertThat(Hash.toHex(hash), is(equalTo("0196b566757d3a0dcdbb716b024cfeb256be22715af93942b392a126a3ce93b2c6c60dd45ee39540b5494dbfdce58678c41a69ba9ff155ce691ce093755bfe46")));
     }
+    
+    @Test
+    public void testFromHex()
+    {
+        assertThat(Hash.toHex(Hash.fromHex("188036d68a10c62c7d38f90a246748c5")), is(equalTo("188036d68a10c62c7d38f90a246748c5")));
+    }
 }

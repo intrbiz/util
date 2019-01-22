@@ -13,10 +13,11 @@ public class Hash
     public static final String SHA256 = "SHA-256";
     public static final String SHA512 = "SHA-512";
     
-    public static final int SHA1_LENGTH = 20;
+    public static final int SHA1_LENGTH   = 20;
     public static final int SHA256_LENGTH = 32;
     
-    public static final int HMAC_SHA1_BLOCKSIZE = 64;
+    public static final int HMAC_SHA1_BLOCKSIZE   = 64;
+    public static final int HMAC_SHA256_BLOCKSIZE = 64;
     
     private static final byte HMAC_OPAD = 0x5C;
     private static final byte HMAC_IPAD = 0x36;
@@ -24,13 +25,13 @@ public class Hash
     public static final byte[] sha256HMAC(byte[] key, BufferSlice... slices)
     {
         // sort out the key
-        if (key.length > SHA256_LENGTH)
+        if (key.length > HMAC_SHA256_BLOCKSIZE)
         {
             key = sha256(key);
         }
-        if (key.length < SHA256_LENGTH)
+        if (key.length < HMAC_SHA256_BLOCKSIZE)
         {
-            byte[] tmp = new byte[SHA256_LENGTH];
+            byte[] tmp = new byte[HMAC_SHA256_BLOCKSIZE];
             System.arraycopy(key, 0, tmp, 0, key.length);
             key = tmp;
         }
@@ -93,13 +94,13 @@ public class Hash
     public static final byte[] sha256HMAC(byte[] key, byte[]... data)
     {
         // sort out the key
-        if (key.length > SHA256_LENGTH)
+        if (key.length > HMAC_SHA256_BLOCKSIZE)
         {
             key = sha256(key);
         }
-        if (key.length < SHA256_LENGTH)
+        if (key.length < HMAC_SHA256_BLOCKSIZE)
         {
-            byte[] tmp = new byte[SHA256_LENGTH];
+            byte[] tmp = new byte[HMAC_SHA256_BLOCKSIZE];
             System.arraycopy(key, 0, tmp, 0, key.length);
             key = tmp;
         }
@@ -286,6 +287,27 @@ public class Hash
             sb.append(HEX_NIBBLE[b[i] & 0xF]);
         }
         return sb.toString();
+    }
+    
+    public static final byte[] fromHex(String hex)
+    {
+        byte[] b = new byte[hex.length() >>> 1];
+        for (int i = 0; i < b.length; i++)
+        {
+            b[i] = (byte) ((fromHexNibble(hex.charAt(i * 2)) << 4) | fromHexNibble(hex.charAt((i * 2) + 1)));
+        }
+        return b;
+    }
+    
+    private static int fromHexNibble(char c)
+    {
+        if (c >= '0' && c <= '9')
+            return c - '0';
+        else if (c >= 'a' && c <= 'f')
+            return c - 'a' + 10;
+        else if (c >= 'A' && c <= 'F')
+            return c - 'A' + 10;
+        return 0;
     }
     
     public static final class BufferSlice
