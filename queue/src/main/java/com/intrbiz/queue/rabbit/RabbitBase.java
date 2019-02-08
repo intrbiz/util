@@ -11,6 +11,7 @@ import com.intrbiz.queue.QueueEventTranscoder;
 import com.intrbiz.queue.QueueException;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Recoverable;
+import com.rabbitmq.client.RecoveryListener;
 
 public abstract class RabbitBase<T> implements AutoCloseable
 {
@@ -42,8 +43,17 @@ public abstract class RabbitBase<T> implements AutoCloseable
             // initialise the connection and channel
             this.channel = broker.connect();
             // log recovery events
-            ((Recoverable) this.channel).addRecoveryListener((r) -> {
-                logger.warn("Lost connection to RabbitMQ lost, auto-recovery complete");
+            ((Recoverable) this.channel).addRecoveryListener(new RecoveryListener() {
+                
+                public void handleRecovery(Recoverable recoverable)
+                {
+                    logger.warn("Lost connection to RabbitMQ lost, auto-recovery complete");
+                }
+                
+                public void handleRecoveryStarted(Recoverable recoverable)
+                {
+                    logger.warn("Lost connection to RabbitMQ lost, auto-recovery starting...");
+                }
             });
             // setup this thing
             this.setup();

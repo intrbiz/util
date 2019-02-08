@@ -9,6 +9,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.intrbiz.queue.QueueBrokerPool;
@@ -97,6 +98,10 @@ public class RabbitPool implements QueueBrokerPool<Channel>
                     });
                 }
                 catch (IOException e)
+                {
+                    throw new QueueException("Cannot connect to queue broker", e);
+                }
+                catch (TimeoutException e)
                 {
                     throw new QueueException("Cannot connect to queue broker", e);
                 }
