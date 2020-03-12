@@ -5,6 +5,7 @@ import com.hazelcast.config.EvictionConfig;
 import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.config.MapConfig;
+import com.hazelcast.config.MaxSizePolicy;
 import com.hazelcast.config.NearCacheConfig;
 import com.hazelcast.config.XmlConfigBuilder;
 import com.hazelcast.core.Hazelcast;
@@ -54,7 +55,12 @@ public class HazelcastCacheProvider implements CacheProvider
                 MapConfig cacheMapConfig = config.getMapConfig(HazelcastCacheProvider.MAP_PREFIX + "*");
                 // add default config for cache maps
                 cacheMapConfig.setMaxIdleSeconds(1 * 60 * 60); /* Objects are removed if they are idle for 1 hour */
-                cacheMapConfig.setEvictionConfig(new EvictionConfig().setEvictionPolicy(EvictionPolicy.LRU));
+                cacheMapConfig.setEvictionConfig(
+                    new EvictionConfig()
+                    .setEvictionPolicy(EvictionPolicy.LRU)
+                    .setSize(30)
+                    .setMaxSizePolicy(MaxSizePolicy.FREE_HEAP_PERCENTAGE)
+                );
                 cacheMapConfig.setTimeToLiveSeconds(12 * 60 * 60); /* Objects are always refreshed every 12 hours */
                 cacheMapConfig.setBackupCount(0); /* We're a cache we don't care if we need to visit the backing store */
                 cacheMapConfig.setAsyncBackupCount(0); /* We're a cache we don't care if we need to visit the backing store */
@@ -62,7 +68,12 @@ public class HazelcastCacheProvider implements CacheProvider
                 // setup nearline cache
                 NearCacheConfig cacheMapNLConfig = new NearCacheConfig();
                 cacheMapNLConfig.setCacheLocalEntries(false);
-                cacheMapNLConfig.setEvictionConfig(new EvictionConfig().setEvictionPolicy(EvictionPolicy.LRU));
+                cacheMapNLConfig.setEvictionConfig(
+                    new EvictionConfig()
+                    .setEvictionPolicy(EvictionPolicy.LRU)
+                    .setSize(30)
+                    .setMaxSizePolicy(MaxSizePolicy.FREE_HEAP_PERCENTAGE)
+                );
                 cacheMapNLConfig.setInMemoryFormat(InMemoryFormat.OBJECT);
                 cacheMapNLConfig.setInvalidateOnChange(true);
                 cacheMapNLConfig.setMaxIdleSeconds(10 * 60); /* 10 minute idle time */
