@@ -71,8 +71,8 @@ public class HazelcastCacheProvider implements CacheProvider
                 cacheMapNLConfig.setEvictionConfig(
                     new EvictionConfig()
                     .setEvictionPolicy(EvictionPolicy.LRU)
-                    .setSize(30)
-                    .setMaxSizePolicy(MaxSizePolicy.FREE_HEAP_PERCENTAGE)
+                    .setSize(10_000)
+                    .setMaxSizePolicy(MaxSizePolicy.ENTRY_COUNT)
                 );
                 cacheMapNLConfig.setInMemoryFormat(InMemoryFormat.OBJECT);
                 cacheMapNLConfig.setInvalidateOnChange(true);
