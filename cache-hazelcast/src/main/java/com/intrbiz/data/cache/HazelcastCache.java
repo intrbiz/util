@@ -2,6 +2,7 @@ package com.intrbiz.data.cache;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -10,8 +11,7 @@ import org.apache.log4j.Logger;
 import com.codahale.metrics.Timer;
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
-import com.hazelcast.core.TransactionalMap;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryEvictedListener;
 import com.hazelcast.map.listener.EntryMergedListener;
@@ -20,6 +20,7 @@ import com.hazelcast.map.listener.EntryUpdatedListener;
 import com.hazelcast.transaction.TransactionContext;
 import com.hazelcast.transaction.TransactionOptions;
 import com.hazelcast.transaction.TransactionOptions.TransactionType;
+import com.hazelcast.transaction.TransactionalMap;
 import com.intrbiz.gerald.source.IntelligenceSource;
 import com.intrbiz.gerald.witchcraft.Witchcraft;
 
@@ -33,9 +34,9 @@ public final class HazelcastCache implements Cache
     
     private final IMap<String, Object> cache;
 
-    private final ConcurrentMap<CacheListener, Object> listeners = new ConcurrentHashMap<CacheListener, Object>();
+    private final ConcurrentMap<CacheListener, Object> listeners = new ConcurrentHashMap<>();
 
-    private final Set<String> listenerIds = new HashSet<String>();
+    private final Set<UUID> listenerIds = new HashSet<>();
     
     // transaction support
     
@@ -279,7 +280,7 @@ public final class HazelcastCache implements Cache
     @Override
     public void close()
     {
-    	for (String listenerId : this.listenerIds)
+    	for (UUID listenerId : this.listenerIds)
     	{
     		this.cache.removeEntryListener(listenerId);
     	}

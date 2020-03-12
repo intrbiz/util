@@ -221,6 +221,30 @@ public abstract class DatabaseAdapter implements DataAdapter
             this.end();
         }
     }
+    
+    public <T> T executeCall(DatabaseCall<T> transaction) throws DataException
+    {
+        T result = null;
+        this.begin();
+        try
+        {
+            try
+            {
+                result = transaction.run(this.connection.borrowConnection());
+                this.commit();
+            }
+            catch (SQLException e)
+            {
+                throw new DataException(e);
+            }
+
+        }
+        finally
+        {
+            this.end();
+        }
+        return result;
+    }
 
     public boolean isInTransaction()
     {

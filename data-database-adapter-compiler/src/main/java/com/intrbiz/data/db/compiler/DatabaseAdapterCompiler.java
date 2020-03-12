@@ -432,10 +432,15 @@ public class DatabaseAdapterCompiler
 
     // adapter class
     
+    private <T extends DatabaseAdapter> String getVersionedClassName(Class<T> cls)
+    {
+        return cls.getSimpleName();
+    }
+    
     @SuppressWarnings("unchecked")
     public <T extends DatabaseAdapter> DatabaseAdapterFactory<T> loadPrecompiledAdapterFactory(Class<T> cls)
     {
-        String factoryClassName = cls.getPackage().getName() + "." + cls.getSimpleName() + "ImplFactory";
+        String factoryClassName = cls.getPackage().getName() + "." + this.getVersionedClassName(cls) + "ImplFactory";
         try
         {
             Class<?> precompiledFactoryClass = Class.forName(factoryClassName);
@@ -458,7 +463,7 @@ public class DatabaseAdapterCompiler
         // compile the actual adapter implementation
         Class<?> impl = this.compileAdapterImplementation(cls);
         // compile the factory
-        JavaClass fact = new JavaClass(cls.getPackage().getName(), cls.getSimpleName() + "ImplFactory");
+        JavaClass fact = new JavaClass(cls.getPackage().getName(), this.getVersionedClassName(cls) + "ImplFactory");
         fact.addImport(DatabaseAdapterFactory.class.getCanonicalName());
         fact.addImport(DatabaseConnection.class.getCanonicalName());
         fact.addImport(impl.getCanonicalName());
@@ -494,7 +499,7 @@ public class DatabaseAdapterCompiler
     @SuppressWarnings("unchecked")
     public <T extends DatabaseAdapter> Class<T> loadPrecompiledAdapterImplementation(Class<T> cls)
     {
-        String implClassName = cls.getPackage().getName() + "." + cls.getSimpleName() + "Impl";
+        String implClassName = cls.getPackage().getName() + "." + this.getVersionedClassName(cls) + "Impl";
         try
         {
             Class<?> precompiledImplClass = Class.forName(implClassName);
@@ -517,7 +522,7 @@ public class DatabaseAdapterCompiler
         // parse the schema
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
         // the implementation class
-        JavaClass impl = new JavaClass(cls.getPackage().getName(), cls.getSimpleName() + "Impl");
+        JavaClass impl = new JavaClass(cls.getPackage().getName(), this.getVersionedClassName(cls) + "Impl");
         // some imports
         impl.addImport(cls.getCanonicalName());
         impl.addImport(DataException.class.getCanonicalName());
