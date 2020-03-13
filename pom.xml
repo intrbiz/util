@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.intrbiz.util</groupId>
 	<artifactId>util</artifactId>
@@ -20,34 +22,35 @@
 		<core.version>[1.0,)</core.version>
 		<express.version>[4.1,)</express.version>
 	</properties>
-	
+
 	<repositories>
-		<repository>
-			<id>snapshots</id>
-			<url>http://nexus.intrbiz.net/nexus/content/repositories/snapshots</url>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-		</repository>
 		<repository>
 			<id>intrbiz</id>
 			<name>Intrbiz</name>
-			<url>http://nexus.intrbiz.net/nexus/content/repositories/releases</url>
+			<url>https://nexus.intrbiz.net/repository/intrbiz</url>
 		</repository>
 	</repositories>
-	
+
+	<pluginRepositories>
+		<pluginRepository>
+			<id>intrbiz</id>
+			<name>Intrbiz</name>
+			<url>https://nexus.intrbiz.net/repository/intrbiz</url>
+		</pluginRepository>
+	</pluginRepositories>
+
 	<distributionManagement>
 		<snapshotRepository>
 			<id>snapshots</id>
-			<url>http://nexus.intrbiz.net/nexus/content/repositories/snapshots</url>
+			<url>https://nexus.intrbiz.net/repository/intrbiz-snapshot</url>
 		</snapshotRepository>
 		<repository>
 			<id>intrbiz</id>
 			<name>Intrbiz</name>
-			<url>http://nexus.intrbiz.net/nexus/content/repositories/releases</url>
+			<url>https://nexus.intrbiz.net/repository/intrbiz-release</url>
 		</repository>
 	</distributionManagement>
-	
+
 	<build>
 		<plugins>
 			<plugin>
@@ -86,10 +89,10 @@
 							<goal>jar</goal>
 						</goals>
 						<configuration>
-			                <additionalparam>-Xdoclint:none</additionalparam>
-                            <source>8</source>
-                            <failOnError>false</failOnError>
-			            </configuration>
+							<additionalparam>-Xdoclint:none</additionalparam>
+							<source>8</source>
+							<failOnError>false</failOnError>
+						</configuration>
 					</execution>
 				</executions>
 			</plugin>
@@ -104,12 +107,12 @@
 		<module>data-database-adapter-compiler</module>
 		<module>data-annotations</module>
 		<module>packaging</module>
-	    <module>bootstrap</module>
-	    <module>cache-hazelcast</module>
-        <module>scripting</module>
-        <module>manifold</module>
-        <module>data-database-adapter-compiler-plugin</module>
-        <module>pgq</module>
+		<module>bootstrap</module>
+		<module>cache-hazelcast</module>
+		<module>scripting</module>
+		<module>manifold</module>
+		<module>data-database-adapter-compiler-plugin</module>
+		<module>pgq</module>
 	</modules>
 	<dependencyManagement>
 		<dependencies>
