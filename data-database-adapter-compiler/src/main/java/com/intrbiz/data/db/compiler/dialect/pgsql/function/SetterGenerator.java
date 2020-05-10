@@ -55,16 +55,6 @@ public class SetterGenerator implements SQLFunctionGenerator
             to.writeid(col.getName()).write(" = ").writeid("p_" + col.getName());
             ns = true;
         }
-        // pkey
-        to.write(" WHERE ");
-        ns = false;
-        for (Column col : table.getPrimaryKey().getColumns())
-        {
-            if (ns) to.write(" AND ");
-            // cheat
-            to.writeid(col.getName()).write(" = ").writeid("p_" + col.getName());
-            ns = true;
-        }
     }
     
     public SQLCommand writefunctionBindingSQL(SQLDialect dialect, Function function)
