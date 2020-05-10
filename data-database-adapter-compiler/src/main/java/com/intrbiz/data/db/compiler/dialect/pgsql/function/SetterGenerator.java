@@ -43,7 +43,11 @@ public class SetterGenerator implements SQLFunctionGenerator
         to.write("  ON CONFLICT");
         if (table.getPartitioning() == null)
         {
-            to.write(" ON CONSTRAINT ").writeid(table.getPrimaryKey().getName()).writeln("");
+            to.write(" ON CONSTRAINT ").writeid(table.getPrimaryKey().getName()).writeln();
+        }
+        else
+        {
+            to.write("(").writeColumnNameList(table.getPrimaryKey().getColumns()).write(")").writeln();
         }
         to.write("   DO UPDATE SET ");
         // set cols
