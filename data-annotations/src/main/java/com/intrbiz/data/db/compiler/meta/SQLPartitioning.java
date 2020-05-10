@@ -7,13 +7,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface SQLTable
+public @interface SQLPartitioning
 {
-    Class<?> schema();
-    
-    String  name();
-    
-    SQLVersion since();
-    
-    boolean virtual() default false;
+    SQLPartition[] value();
 }

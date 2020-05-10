@@ -8,6 +8,8 @@ import java.net.URLClassLoader;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.maven.artifact.Artifact;
@@ -88,6 +90,7 @@ public class DatabaseAdapterCompilerPlugin extends AbstractMojo
         super();
     }
 
+    @SuppressWarnings("unchecked")
     public void execute() throws MojoExecutionException
     {
         Log log = this.getLog();
@@ -113,6 +116,7 @@ public class DatabaseAdapterCompilerPlugin extends AbstractMojo
                 Method implCompiler = compilerClass.getMethod("compileAdapterImplementation", new Class<?>[] { Class.class });
                 Method factCompiler = compilerClass.getMethod("compileAdapterFactory", new Class<?>[] { Class.class });
                 Method sqlInstallCompiler = compilerClass.getMethod("compileInstallSchemaToString", new Class<?>[] { Class.class });
+                Method sqlUpgradeCompiler = compilerClass.getMethod("compileAllUpgradeSchemasToString", new Class<?>[] { Class.class });
                 // create our compiler instance
                 Object compiler = compilerFactory.invoke(null, new Object[] { this.getDefaultOwner() });
                 log.info("Created compiler: " + compiler);
@@ -126,13 +130,24 @@ public class DatabaseAdapterCompilerPlugin extends AbstractMojo
                 Object factory = factCompiler.invoke(compiler, new Object[] { adapterDefinition });
                 log.info("Compiled adapter factory: " + factory.getClass().getCanonicalName());
                 // build the SQL and write to a file in the target dir
-                String sql = (String) sqlInstallCompiler.invoke(compiler, new Object[] { adapterDefinition });
+                String installSql = (String) sqlInstallCompiler.invoke(compiler, new Object[] { adapterDefinition });
                 File installFile = new File(this.getTargetDirectory(), "install.sql");
                 try (FileWriter fw = new FileWriter(installFile))
                 {
-                    fw.write(sql);
+                    fw.write(installSql);
                 }
                 log.info("Wrote install SQL to " + installFile.getAbsolutePath());
+                // build the SQL upgrade files
+                Map<String, String> upgradeSqls = (Map<String, String>) sqlUpgradeCompiler.invoke(compiler, new Object[] { adapterDefinition });
+                for (Entry<String, String> upgradeSql : upgradeSqls.entrySet())
+                {
+                    File upgradeFile = new File(this.getTargetDirectory(), "upgrade-from-" + upgradeSql.getKey() + ".sql");
+                    try (FileWriter fw = new FileWriter(upgradeFile))
+                    {
+                        fw.write(upgradeSql.getValue());
+                    }
+                    log.info("Wrote upgrade SQL to " + upgradeFile.getAbsolutePath());
+                }
             }
         }
         catch (Exception e)

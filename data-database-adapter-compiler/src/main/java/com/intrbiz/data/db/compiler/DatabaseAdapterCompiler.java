@@ -11,6 +11,8 @@ import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.log4j.Logger;
@@ -39,6 +41,7 @@ import com.intrbiz.data.db.compiler.meta.ScriptType;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.ForeignKey;
 import com.intrbiz.data.db.compiler.model.Function;
+import com.intrbiz.data.db.compiler.model.Index;
 import com.intrbiz.data.db.compiler.model.Patch;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
@@ -184,6 +187,17 @@ public class DatabaseAdapterCompiler
         return schema.toString();
     }
     
+    public SortedMap<String, String> compileAllUpgradeSchemasToString(Class<? extends DatabaseAdapter> cls)
+    {
+        Schema schema = this.introspector.buildSchema(this.dialect, cls);
+        SortedMap<String, String> upgrades = new TreeMap<>();
+        for (Version from : schema.findAllPreviousVersions())
+        {
+            upgrades.put(from.toString(), this.compileUpgradeSchema(schema, from).toString());
+        }
+        return upgrades;
+    }
+    
     public SQLScriptSet compileInstallSchema(Class<? extends DatabaseAdapter> cls)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
@@ -194,15 +208,44 @@ public class DatabaseAdapterCompiler
         // info functions
         set.add(this.dialect.writeCreateSchemaNameFunction(schema));
         set.add(this.dialect.writeCreateSchemaVersionFunction(schema));
-        // create all the tables
+        // create all normal tables the tables
         for (Table table : schema.getTables())
         {
-            if (! table.isVirtual()) set.add(this.dialect.writeCreateTable(table));
+            if ((! table.isVirtual()) && table.getPartitioning() == null)
+            {
+                set.add(this.dialect.writeCreateTable(table));
+            }
+        }
+        // create any partitioned tables
+        for (Table table : schema.getTables())
+        {
+            if ((! table.isVirtual()) && table.getPartitioning() != null)
+            {
+                set.add(this.dialect.writeCreatePartitionedTable(table));
+                set.add(this.dialect.writeCreatePartitionedTableHelpers(table));
+            }
         }
         // add all foreign keys
         for (Table table : schema.getTables())
         {
-            if (! table.isVirtual()) set.add(this.dialect.writeCreateTableForeignKeys(table));
+            if ((! table.isVirtual()) && table.getPartitioning() == null)
+            {
+                for (ForeignKey fkey : table.getForeignKeys())
+                {
+                    set.add(this.dialect.writeAlterTableAddForeignKey(table, fkey));
+                }
+            }
+        }
+        // add all indexes
+        for (Table table : schema.getTables())
+        {
+            if ((! table.isVirtual()) && table.getPartitioning() == null)
+            {
+                for (Index index : table.getIndexes())
+                {
+                    set.add(this.dialect.writeCreateIndex(table, index));
+                }
+            }
         }
         //
         for (Type type : schema.getTypes())
@@ -236,9 +279,12 @@ public class DatabaseAdapterCompiler
     public SQLScriptSet compileUpgradeSchema(Class<? extends DatabaseAdapter> cls, Version installedVersion)
     {
         Schema schema = this.introspector.buildSchema(this.dialect, cls);
-        //
+        return this.compileUpgradeSchema(schema, installedVersion);
+    }
+    
+    protected SQLScriptSet compileUpgradeSchema(Schema schema, Version installedVersion)
+    {
         if (installedVersion.isAfter(schema.getVersion())) throw new RuntimeException("Cannot upgrade a schema to a previous version (" + installedVersion + " => " + schema.getVersion() + ").");
-        //
         SQLScriptSet set = new SQLScriptSet();
         // upgrade the version info function
         set.add(this.dialect.writeCreateSchemaVersionFunction(schema));
@@ -246,7 +292,7 @@ public class DatabaseAdapterCompiler
         for (Table table : schema.getTables())
         {
             // only add columns to table we are not going to install
-            if (table.getSince().isBeforeOrEqual(installedVersion) && (! table.isVirtual()))
+            if (table.getSince().isBeforeOrEqual(installedVersion) && (! table.isVirtual()) && table.getPartitioning() == null)
             {
                 // columns
                 for (Column col : table.findColumnsSince(installedVersion))
@@ -258,18 +304,34 @@ public class DatabaseAdapterCompiler
         // install any new tables
         for (Table table : schema.getTables())
         {
-            if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()))
+            if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()) && table.getPartitioning() == null)
             {
                 set.add(this.dialect.writeCreateTable(table));
+            }
+        }
+        // update helper functions for partitioned tables from previous versions
+        for (Table table : schema.getTables())
+        {
+            if (table.getSince().isBeforeOrEqual(installedVersion) && (! table.isVirtual()) && table.getPartitioning() != null)
+            {
+                set.add(this.dialect.writeCreatePartitionedTableHelpers(table));
+            }
+        }
+        // new partitioned tables
+        for (Table table : schema.getTables())
+        {
+            if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()) && table.getPartitioning() != null)
+            {
+                set.add(this.dialect.writeCreatePartitionedTable(table));
+                set.add(this.dialect.writeCreatePartitionedTableHelpers(table));
             }
         }
         // add foreign keys
         for (Table table : schema.getTables())
         {
-            // only add columns to table we are not going to install
-            if (table.getSince().isBeforeOrEqual(installedVersion) && (! table.isVirtual()))
+            // only add foreign keys to table we are not going to install
+            if (table.getSince().isBeforeOrEqual(installedVersion) && (! table.isVirtual()) && table.getPartitioning() == null)
             {
-                // columns
                 for (ForeignKey fkey : table.findForeignKeysSince(installedVersion))
                 {
                     set.add(this.dialect.writeAlterTableAddForeignKey(table, fkey));
@@ -279,9 +341,35 @@ public class DatabaseAdapterCompiler
         // install foreign keys for any new tables
         for (Table table : schema.getTables())
         {
-            if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()))
+            if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()) && table.getPartitioning() == null)
             {
-                set.add(this.dialect.writeCreateTableForeignKeys(table));
+                for (ForeignKey fkey : table.getForeignKeys())
+                {
+                    set.add(this.dialect.writeAlterTableAddForeignKey(table, fkey));
+                }
+            }
+        }
+        // add indexes
+        for (Table table : schema.getTables())
+        {
+            // only add indexes to table we are not going to install
+            if (table.getSince().isBeforeOrEqual(installedVersion) && (! table.isVirtual()) && table.getPartitioning() == null)
+            {
+                for (Index index : table.findIndexesSince(installedVersion))
+                {
+                    set.add(this.dialect.writeCreateIndex(table, index));
+                }
+            }
+        }
+        // install indexes for any new tables
+        for (Table table : schema.getTables())
+        {
+            if (table.getSince().isAfter(installedVersion) && (! table.isVirtual()) && table.getPartitioning() == null)
+            {
+                for (Index index : table.getIndexes())
+                {
+                    set.add(this.dialect.writeCreateIndex(table, index));
+                }
             }
         }
         // add attributes
@@ -633,12 +721,15 @@ public class DatabaseAdapterCompiler
     public static String tableCacheKey(Table table)
     {
         StringBuilder sb = new StringBuilder("(t) -> { return \"").append(JavaUtil.escapeString(table.getName())).append(".\"");
-        boolean ns = false;
-        for (Column column : table.getPrimaryKey().getColumns())
+        if (table.getPrimaryKey() != null)
         {
-            if (ns) sb.append(" + \".\"");
-            sb.append(" + t.").append(JavaUtil.getterName(column.getDefinition())).append("()");
-            ns = true;
+            boolean ns = false;
+            for (Column column : table.getPrimaryKey().getColumns())
+            {
+                if (ns) sb.append(" + \".\"");
+                sb.append(" + t.").append(JavaUtil.getterName(column.getDefinition())).append("()");
+                ns = true;
+            }
         }
         sb.append("; }");
         return sb.toString();

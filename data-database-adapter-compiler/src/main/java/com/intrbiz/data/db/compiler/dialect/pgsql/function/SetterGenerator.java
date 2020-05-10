@@ -15,39 +15,15 @@ public class SetterGenerator implements SQLFunctionGenerator
     public void writeCreateFunctionBody(SQLDialect dialect, SQLCommand to, Function function)
     {
         SetterInfo info = (SetterInfo) function.getIntrospectionInformation();
-        //
-        to.writeln("DECLARE");
-        if (info.isUpsert()) to.writeln("  _i INTEGER;");
         to.writeln("BEGIN");
-        //
-        if (info.isUpsert())
+        this.generateInsert(dialect, to, function);
+        if (info.isUpsert() && function.getTable().getPrimaryKey() != null)
         {
-            to.writeln("  FOR _i IN 0..100 LOOP");
-            to.write("  ");
-            this.generateUpdate(dialect, to, function);
-            to.writeln("    IF found THEN");
-            to.writeln("      RETURN NEXT 1;");
-            to.writeln("      RETURN;");
-            to.writeln("    END IF;");
-            to.writeln("    BEGIN");
-            to.write("    ");
-            this.generateInsert(dialect, to, function);
-            to.writeln("      RETURN NEXT 1;");
-            to.writeln("      RETURN;");
-            to.writeln("    EXCEPTION");
-            to.writeln("      WHEN unique_violation THEN");
-            to.writeln("        /* nothing */");
-            to.writeln("    END;");
-            to.writeln("  END LOOP;");
-            to.writeln("  RAISE SQLSTATE 'UPS01' USING MESSAGE = 'Failed to upsert';");
+            this.generateConflict(dialect, to, function);
         }
-        else
-        {
-            this.generateInsert(dialect, to, function);
-            to.writeln("  RETURN NEXT 1;");
-            to.writeln("  RETURN;");
-        }
-        //
+        to.write(";");
+        to.writeln("  RETURN NEXT 1;");
+        to.writeln("  RETURN;");
         to.writeln("END;");
     }
     
@@ -56,15 +32,21 @@ public class SetterGenerator implements SQLFunctionGenerator
         Table table = function.getTable();
         to.write("  INSERT INTO").writeid(table.getSchema(), table.getName()).write(" (").writeColumnNameList(table.getColumns()).write(")");
         to.write(" VALUES ");
-        to.write("(").writeArgumentNameList(function.getArguments()).writeln(");");
+        to.writeln("(").writeArgumentNameList(function.getArguments()).writeln(")");
     }
     
-    protected void generateUpdate(SQLDialect dialect, SQLCommand to, Function function)
+    protected void generateConflict(SQLDialect dialect, SQLCommand to, Function function)
     {
         Table table = function.getTable();
-        to.write("  UPDATE ").writeid(table.getSchema(), table.getName());
+        if (table.getPrimaryKey() == null)
+            throw new RuntimeException("Cannot generate upsert for setter " + function.getName() + " as the table " + table.getName() + " has no primary key!");
+        to.write("  ON CONFLICT");
+        if (table.getPartitioning() == null)
+        {
+            to.write(" ON CONSTRAINT ").writeid(table.getPrimaryKey().getName()).writeln("");
+        }
+        to.write("   DO UPDATE SET ");
         // set cols
-        to.write(" SET ");
         boolean ns = false;
         for (Column col : table.getNonPrimaryColumns())
         {
@@ -83,7 +65,6 @@ public class SetterGenerator implements SQLFunctionGenerator
             to.writeid(col.getName()).write(" = ").writeid("p_" + col.getName());
             ns = true;
         }
-        to.writeln(";");
     }
     
     public SQLCommand writefunctionBindingSQL(SQLDialect dialect, Function function)

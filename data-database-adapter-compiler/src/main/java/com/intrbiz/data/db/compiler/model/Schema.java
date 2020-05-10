@@ -2,6 +2,8 @@ package com.intrbiz.data.db.compiler.model;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import com.intrbiz.data.db.DatabaseAdapter;
 
@@ -135,6 +137,42 @@ public class Schema
     public void addPatches(List<Patch> patches)
     {
         this.patches.addAll(patches);
+    }
+    
+    public SortedSet<Version> findAllPreviousVersions()
+    {
+        SortedSet<Version> versions = new TreeSet<>();
+        for (Table table : this.tables)
+        {
+            versions.add(table.getSince());
+            for (Column col : table.getColumns())
+            {
+                versions.add(col.getSince());
+            }
+            for (ForeignKey fk : table.getForeignKeys())
+            {
+                versions.add(fk.getSince());
+            }
+            for (Index idx : table.getIndexes())
+            {
+                versions.add(idx.getSince());
+            }
+        }
+        for (Function func : this.getFunctions())
+        {
+            versions.add(func.getSince());
+        }
+        for (Type type : this.getTypes())
+        {
+            versions.add(type.getSince());
+        }
+        for (Patch patch : this.patches)
+        {
+            versions.add(patch.getVersion());
+        }
+        // remove the current version
+        versions.remove(this.version);
+        return versions;
     }
 
     public String toString()

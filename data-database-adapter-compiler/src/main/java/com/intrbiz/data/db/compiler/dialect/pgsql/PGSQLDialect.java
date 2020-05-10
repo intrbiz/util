@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.apache.log4j.Logger;
 
+import com.intrbiz.Util;
 import com.intrbiz.data.db.compiler.dialect.SQLDialect;
 import com.intrbiz.data.db.compiler.dialect.function.SQLFunctionGenerator;
 import com.intrbiz.data.db.compiler.dialect.pgsql.function.GetterGenerator;
@@ -18,6 +19,7 @@ import com.intrbiz.data.db.compiler.dialect.type.SQLSimpleType;
 import com.intrbiz.data.db.compiler.dialect.type.SQLType;
 import com.intrbiz.data.db.compiler.meta.Action;
 import com.intrbiz.data.db.compiler.meta.Deferable;
+import com.intrbiz.data.db.compiler.meta.PartitionMode;
 import com.intrbiz.data.db.compiler.meta.SQLGetter;
 import com.intrbiz.data.db.compiler.meta.SQLRemove;
 import com.intrbiz.data.db.compiler.meta.SQLSetter;
@@ -25,6 +27,9 @@ import com.intrbiz.data.db.compiler.model.Argument;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.ForeignKey;
 import com.intrbiz.data.db.compiler.model.Function;
+import com.intrbiz.data.db.compiler.model.Index;
+import com.intrbiz.data.db.compiler.model.Partition;
+import com.intrbiz.data.db.compiler.model.Partitioning;
 import com.intrbiz.data.db.compiler.model.Schema;
 import com.intrbiz.data.db.compiler.model.Table;
 import com.intrbiz.data.db.compiler.model.Type;
@@ -169,6 +174,215 @@ public class PGSQLDialect extends SQLDialect
         s.command().write("CREATE SCHEMA ").writeid(schema.getName()).write(" AUTHORIZATION ").write(this.getOwner());
         return s;
     }
+    
+    @Override
+    public SQLScript writeCreatePartitionedTable(Table table)
+    {
+        Partitioning parting = table.getPartitioning();
+        Partition upperPart = parting.getPartitions().get(0);
+        Partition lowerPart = parting.getPartitions().get(parting.getPartitions().size() - 1);
+        boolean parentPrimaryKey = table.getPrimaryKey() != null && table.getPrimaryKey().findColumn(lowerPart.getOn().get(0).getName()) != null;
+        //
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
+        to.write("CREATE TABLE ").writeid(table.getSchema(), table.getName()).writeln();
+        to.writeln("(");
+        // attributes
+        boolean ns = false;
+        for (Column col : table.getColumns())
+        {
+            if (ns) to.writeln(",");
+            to.write("    ").writeid(col.getName()).write(" ").write(col.getType().getSQLType());
+            if (col.isNotNull()) to.write(" NOT NULL");
+            ns = true;
+        }
+        // primary key
+        if (parentPrimaryKey && table.getPrimaryKey() != null)
+        {
+            if (ns) to.writeln(",");
+            to.write("    CONSTRAINT ").writeid(table.getPrimaryKey().getName()).write(" PRIMARY KEY");
+            to.write(" (").writeColumnNameList(table.getPrimaryKey().getColumns()).write(")");
+            ns = true;
+        }
+        // unique constraints
+        for (Unique unq : table.getUniques())
+        {
+            if (ns) to.writeln(",");
+            to.write("    CONSTRAINT ").writeid(unq.getName()).write(" UNIQUE");
+            to.write(" (").writeColumnNameList(unq.getColumns()).write(")");
+            ns = true;
+        }
+        to.writeln();
+        to.writeln(")");
+        to.write("PARTITION BY ").write(this.getPgsqlPartitionMode(upperPart.getMode())).write(" (").writeColumnNameList(upperPart.getOn()).writeln(")");
+        //
+        s.command().write("ALTER TABLE ").writeid(table.getSchema(), table.getName()).write(" OWNER TO ").write(this.getOwner());
+        return s;
+    }
+    
+    private String getPgsqlPartitionMode(PartitionMode mode)
+    {
+        switch (mode)
+        {
+            case HASH:  return "HASH";
+            case RANGE: return "RANGE";
+            case LIST:  return "LIST";
+            // unsupported
+            case NONE:
+            default: break;
+        }
+        throw new RuntimeException("The partition mode " + mode + " is not supported by PostgreSQL");
+    }
+    
+    public SQLScript writeCreatePartitionedTableHelpers(Table table)
+    {
+        SQLScript s = new SQLScript();
+        Partitioning parting = table.getPartitioning();
+        Partition lowerPart = parting.getPartitions().get(parting.getPartitions().size() - 1);
+        boolean parentPrimaryKey = table.getPrimaryKey() != null && table.getPrimaryKey().findColumn(lowerPart.getOn().get(0).getName()) != null;
+        for (int i = 0; i < parting.getPartitions().size(); i++)
+        {
+            Partition part = parting.getPartitions().get(i);
+            Partition subPart = (i + 1) < parting.getPartitions().size() ? parting.getPartitions().get(i + 1) : null;
+            // function to create child partitions
+            createPartitionHelper(table, i, part, subPart, parentPrimaryKey, s);
+        }
+        return s;
+    }
+    
+    protected void createPartitionHelper(Table table, int depth, Partition part, Partition subPart, boolean parentPrimaryKey, SQLScript s)
+    {
+        SQLCommand to = s.command();
+        to.write("CREATE OR REPLACE FUNCTION ").writeid(table.getSchema(), "create_" + table.getName() + "_partition_" + depth).write("(");
+        //
+        if (depth > 0)
+        {
+            to.write("p_parent_table_name TEXT, ");    
+        }
+        to.write("p_suffix TEXT, ");
+        if (part.getMode() == PartitionMode.RANGE)
+        {
+            to.write("p_from ").write(part.getOn().get(0).getType().getSQLType()).write(", ");
+            to.write("p_to ").write(part.getOn().get(0).getType().getSQLType()).write(", ");
+        }
+        else if (part.getMode() == PartitionMode.HASH)
+        {
+            to.write("p_modulus INTEGER, ");
+            to.write("p_remainder INTEGER, ");
+        }
+        else if (part.getMode() == PartitionMode.LIST)
+        {
+            to.write("p_values ").write(part.getOn().get(0).getType().getSQLType()).write("[], ");
+        }
+        to.write("p_exclude_indexes TEXT[]");
+        //
+        to.write(")").writeln();
+        to.write("RETURNS TEXT AS ").writeln("$BODY$").writeln();
+        to.write("DECLARE").writeln();
+        to.write("  v_up_tbl_name TEXT;").writeln();
+        to.write("  v_tbl_name TEXT;").writeln();
+        to.write("  v_con_name TEXT;").writeln();
+        to.write("  v_idx_name TEXT;").writeln();
+        to.write("BEGIN").writeln();
+        to.write("  -- Create the partition").writeln();
+        if (depth > 0)
+        {
+            to.write("  v_up_tbl_name := p_parent_table_name;").writeln();   
+        }
+        else
+        {
+            to.write("  v_up_tbl_name := quote_ident('").write(table.getSchema().getName()).write("') || '.' || quote_ident('").write(table.getName()).writeln("');").writeln();
+        }
+        to.write("  v_tbl_name := quote_ident('").write(table.getSchema().getName()).write("') || '.' || quote_ident('").write(table.getName()).write("_' || p_suffix);").writeln();
+        to.write("  EXECUTE 'CREATE TABLE ' || v_tbl_name || ' PARTITION OF ' || v_up_tbl_name || ").writeln();
+        if (part.getMode() == PartitionMode.RANGE)
+        {
+            to.write("          ' FOR VALUES FROM (' || quote_literal(p_from) || ') TO (' || quote_literal(p_to) || ')' || ").writeln();
+        }
+        else if (part.getMode() == PartitionMode.HASH)
+        {
+            to.write("          ' FOR VALUES WITH (MODULUS ' || p_modulus || ', REMAINDER ' || p_remainder || ')' || ").writeln();
+        }
+        else if (part.getMode() == PartitionMode.LIST)
+        {
+            
+            to.write("          ' FOR VALUES IN (' || (SELECT string_agg(quote_literal(v.e), ', ') FROM unnest(p_values) v(e)) || ')' || ").writeln();
+        }
+        if (subPart != null)
+        {
+            to.write("          ' PARTITION BY ").write(this.getPgsqlPartitionMode(subPart.getMode())).write(" (").writeColumnNameList(subPart.getOn()).write(")' || ").writeln();
+        }
+        to.write("          ';';").writeln();
+        // stuff that is only on leaf partitions
+        if (subPart == null)
+        {
+            if ((! parentPrimaryKey) && table.getPrimaryKey() != null)
+            {
+                to.write("  -- Create primary key").writeln();
+                to.write("  v_con_name := quote_ident('").writeid(table.getPrimaryKey().getName()).write("_' || p_suffix);").writeln();
+                to.write("  EXECUTE 'ALTER TABLE ' || v_tbl_name || ").writeln();
+                to.write("          ' ADD CONSTRAINT ' || v_con_name  ||").writeln();
+                to.write("          ' PRIMARY KEY (").writeColumnNameList(table.getPrimaryKey().getColumns()).write(");';").writeln();
+            }
+            // indexes
+            // partition index
+            if (part.isIndexOn())
+            {
+                to.write("  -- Create an index on the partitioned column").writeln();
+                to.write("  v_idx_name := quote_ident('").write(table.getName()).write("_' || p_suffix || '_pt');").writeln();
+                to.write("  EXECUTE 'CREATE INDEX ' || v_idx_name || ").writeln();
+                to.write("          ' ON ' || v_tbl_name || ").writeln();
+                to.write("          '  USING ").write(Util.coalesceEmpty(part.getIndexOnUsing(), "btree")).write("(").writeColumnNameList(part.getOn()).write(");';").writeln();
+            }
+            // custom indexes
+            for (Index index : table.getIndexes())
+            {
+                to.write("  -- Create index ").write(index.getName()).writeln();
+                to.write("  IF p_exclude_indexes IS NULL OR NOT ('").write(index.getName()).write("' = ANY(p_exclude_indexes)) THEN").writeln();
+                to.write("    v_idx_name := quote_ident('").write(index.getName()).write("_' || p_suffix);").writeln();
+                to.write("    EXECUTE 'CREATE INDEX ' || v_idx_name || ").writeln();
+                to.write("            ' ON ' || v_tbl_name || ").writeln();
+                to.write("            '  USING ").write(Util.coalesceEmpty(index.getUsing(), "btree")).write("(' || ");
+                if (Util.isEmpty(index.getExpression()))
+                {
+                    to.write("'").writeColumnNameList(index.getColumns()).write("'");
+                }
+                else
+                {
+                    to.write("$IDX$").write(index.getExpression()).write("$IDX$");
+                }
+                to.write(" || ');';").writeln();
+                to.write("  END IF;").writeln();
+            }
+        }
+        to.write("  RETURN v_tbl_name;").writeln();
+        to.write("END").writeln();
+        to.write("$BODY$").writeln();
+        to.write("LANGUAGE plpgsql").writeln();
+        //
+        to = s.command().write("ALTER FUNCTION ").writeid(table.getSchema(), "create_" + table.getName() + "_partition_" + depth).write("(");
+        if (depth > 0)
+        {
+            to.write("TEXT, ");    
+        }
+        to.write("TEXT, ");
+        if (part.getMode() == PartitionMode.RANGE)
+        {
+            to.write(part.getOn().get(0).getType().getSQLType()).write(", ");
+            to.write(part.getOn().get(0).getType().getSQLType()).write(", ");
+        }
+        else if (part.getMode() == PartitionMode.HASH)
+        {
+            to.write("INTEGER, ");
+            to.write("INTEGER, ");
+        }
+        else if (part.getMode() == PartitionMode.LIST)
+        {
+            to.write(part.getOn().get(0).getType().getSQLType()).write("[], ");
+        }
+        to.write("TEXT[])");
+        to.write(" OWNER TO ").write(this.getOwner());
+    }
 
     @Override
     public SQLScript writeCreateTable(Table table)
@@ -203,7 +417,7 @@ public class PGSQLDialect extends SQLDialect
             ns = true;
         }
         to.writeln();
-        to.writeln(")");
+        to.write(")");
         //
         s.command().write("ALTER TABLE ").writeid(table.getSchema(), table.getName()).write(" OWNER TO ").write(this.getOwner());
         //
@@ -211,26 +425,46 @@ public class PGSQLDialect extends SQLDialect
     }
     
     @Override
-    public SQLScript writeCreateTableForeignKeys(Table table)
+    public SQLScript writeCreateIndex(Table table, Index idx)
     {
         SQLScript s = new SQLScript();
-        // foreign keys
-        for (ForeignKey key : table.getForeignKeys())
+        SQLCommand to = s.command();
+        to.write("CREATE INDEX ").writeid(idx.getName()).write(" ON ").writeid(table.getSchema(), table.getName()).writeln();
+        to.write("  USING ").write(Util.coalesceEmpty(idx.getUsing(), "btree")).write("(");
+        if (Util.isEmpty(idx.getExpression()))
         {
-            SQLCommand to = s.command();
-            //
-            to.write("ALTER TABLE ").writeid(table.getSchema(), table.getName());
-            to.write(" ADD CONSTRAINT ").writeid(key.getName()).write(" FOREIGN KEY");
-            to.write(" (").writeColumnNameList(key.getColumns()).write(")");
-            to.write(" REFERENCES ").writeid(key.getReferences().getSchema(), key.getReferences().getName());
-            to.write(" (").writeColumnNameList(key.getOn()).write(")");
-            to.write(" ON DELETE ").write(this.writeForeignKeyAction(key.getOnDelete()));
-            to.write(" ON UPDATE ").write(this.writeForeignKeyAction(key.getOnUpdate()));
-            to.write(" ").write(this.writeForeignKeyDeferable(key.getDeferable()));
+            boolean ns = false;
+            for (Column col : idx.getColumns())
+            {
+                if (ns) to.write(",");
+                to.writeid(col.getName());
+                ns = true;
+            }
         }
+        else
+        {
+            to.write(idx.getExpression());
+        }
+        to.write(")");
         return s;
     }
-
+    
+    @Override
+    public SQLScript writeAlterTableAddForeignKey(Table table, ForeignKey key)
+    {
+        SQLScript s = new SQLScript();
+        SQLCommand to = s.command();
+        to.write("ALTER TABLE ").writeid(table.getSchema(), table.getName());
+        to.write(" ADD CONSTRAINT ").writeid(key.getName()).write(" FOREIGN KEY");
+        to.write(" (").writeColumnNameList(key.getColumns()).write(")");
+        to.write(" REFERENCES ").writeid(key.getReferences().getSchema(), key.getReferences().getName());
+        to.write(" (").writeColumnNameList(key.getOn()).write(")");
+        to.write(" ON DELETE ").write(this.writeForeignKeyAction(key.getOnDelete()));
+        to.write(" ON UPDATE ").write(this.writeForeignKeyAction(key.getOnUpdate()));
+        to.write(" ").write(this.writeForeignKeyDeferable(key.getDeferable()));
+        return s;
+    }
+    
     protected String writeForeignKeyAction(Action a)
     {
         if (Action.CASCADE == a)
@@ -251,21 +485,6 @@ public class PGSQLDialect extends SQLDialect
             return "INITIALLY IMMEDIATE";
         else if (Deferable.INITIALLY_DEFERRED == d) return "INITIALLY DEFERRED";
         return "NOT DEFERRABLE";
-    }
-    
-    public SQLScript writeAlterTableAddForeignKey(Table table, ForeignKey key)
-    {
-        SQLScript s = new SQLScript();
-        SQLCommand to = s.command();
-        to.write("ALTER TABLE ").writeid(table.getSchema(), table.getName());
-        to.write(" ADD CONSTRAINT ").writeid(key.getName()).write(" FOREIGN KEY");
-        to.write(" (").writeColumnNameList(key.getColumns()).write(")");
-        to.write(" REFERENCES ").writeid(key.getReferences().getSchema(), key.getReferences().getName());
-        to.write(" (").writeColumnNameList(key.getOn()).write(")");
-        to.write(" ON DELETE ").write(this.writeForeignKeyAction(key.getOnDelete()));
-        to.write(" ON UPDATE ").write(this.writeForeignKeyAction(key.getOnUpdate()));
-        to.write(" ").write(this.writeForeignKeyDeferable(key.getDeferable()));
-        return s;
     }
     
     public SQLScript writeAlterTableAddColumn(Table table, Column col)
@@ -301,6 +520,7 @@ public class PGSQLDialect extends SQLDialect
         return s;
     }
     
+    @Override
     public SQLScript writeAlterTypeAddColumn(Type type, Column col)
     {
         SQLScript s = new SQLScript();
@@ -413,6 +633,7 @@ public class PGSQLDialect extends SQLDialect
         return "SELECT \"" + schema.getName() + "\"._get_module_version()";
     }
 
+    @Override
     public SQLCommand getFunctionCallQuery(Function function)
     {
         SQLFunctionGenerator generator = this.getFunctionGenerator(function.getFunctionType().annotationType());

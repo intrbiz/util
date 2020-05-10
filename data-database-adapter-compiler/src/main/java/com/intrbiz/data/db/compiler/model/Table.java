@@ -24,6 +24,10 @@ public class Table
     private List<Unique> uniques = new LinkedList<Unique>();
 
     private boolean virtual = false;
+    
+    private Partitioning partitioning;
+    
+    private List<Index> indexes = new LinkedList<Index>();
 
     public Table()
     {
@@ -116,7 +120,8 @@ public class Table
         List<Column> cols = new LinkedList<Column>();
         for (Column col : this.getColumns())
         {
-            if (this.getPrimaryKey().findColumn(col.getName()) == null) cols.add(col);
+            if (this.getPrimaryKey() != null && this.getPrimaryKey().findColumn(col.getName()) == null)
+                cols.add(col);
         }
         return cols;
     }
@@ -186,6 +191,36 @@ public class Table
         this.virtual = virtual;
     }
     
+    public Partitioning getPartitioning()
+    {
+        return this.partitioning;
+    }
+
+    public void setPartitioning(Partitioning partitioning)
+    {
+        this.partitioning = partitioning;
+    }
+
+    public List<Index> getIndexes()
+    {
+        return this.indexes;
+    }
+    
+    public List<Index> findIndexesSince(Version version)
+    {
+        return this.indexes.stream().filter((c) -> { return c.getSince().isAfter(version);  }).collect(Collectors.toList());
+    }
+
+    public void setIndexes(List<Index> indexes)
+    {
+        this.indexes = indexes;
+    }
+    
+    public void addIndex(Index index)
+    {
+        this.indexes.add(index);
+    }
+
     /**
      * Perform final operations on the table, 
      * such as sorting the columns

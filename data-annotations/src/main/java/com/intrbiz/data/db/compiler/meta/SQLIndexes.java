@@ -6,14 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface SQLTable
-{
-    Class<?> schema();
-    
-    String  name();
-    
-    SQLVersion since();
-    
-    boolean virtual() default false;
+@Target({ElementType.TYPE})
+public @interface SQLIndexes {
+    SQLIndex[] value() default {};
 }

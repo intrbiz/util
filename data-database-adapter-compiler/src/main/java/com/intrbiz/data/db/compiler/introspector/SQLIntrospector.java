@@ -26,6 +26,10 @@ import com.intrbiz.data.db.compiler.meta.SQLCustom;
 import com.intrbiz.data.db.compiler.meta.SQLForeignKey;
 import com.intrbiz.data.db.compiler.meta.SQLFunction;
 import com.intrbiz.data.db.compiler.meta.SQLGetter;
+import com.intrbiz.data.db.compiler.meta.SQLIndex;
+import com.intrbiz.data.db.compiler.meta.SQLIndexes;
+import com.intrbiz.data.db.compiler.meta.SQLPartition;
+import com.intrbiz.data.db.compiler.meta.SQLPartitioning;
 import com.intrbiz.data.db.compiler.meta.SQLPatch;
 import com.intrbiz.data.db.compiler.meta.SQLPrimaryKey;
 import com.intrbiz.data.db.compiler.meta.SQLRemove;
@@ -37,6 +41,9 @@ import com.intrbiz.data.db.compiler.meta.SQLUniques;
 import com.intrbiz.data.db.compiler.model.Column;
 import com.intrbiz.data.db.compiler.model.ForeignKey;
 import com.intrbiz.data.db.compiler.model.Function;
+import com.intrbiz.data.db.compiler.model.Index;
+import com.intrbiz.data.db.compiler.model.Partition;
+import com.intrbiz.data.db.compiler.model.Partitioning;
 import com.intrbiz.data.db.compiler.model.Patch;
 import com.intrbiz.data.db.compiler.model.PrimaryKey;
 import com.intrbiz.data.db.compiler.model.Schema;
@@ -229,12 +236,13 @@ public class SQLIntrospector
             // build the table columns
             this.buildTable(dialect, cls, 0, table);
             // primary key
-            table.setPrimaryKey(new PrimaryKey(table.getName() + "_pk"));
-            this.buildPrimaryKey(dialect, cls, table);
+            table.setPrimaryKey(this.buildPrimaryKey(dialect, cls, table));
             // foreign keys
             this.buildForeignKeys(dialect, cls, table);
             // unqiues
             this.buildUniques(dialect, cls, table);
+            // indexes
+            this.buildIndexes(dialect, cls, table);
             // sort the columns
             table.finish();
         }
@@ -251,6 +259,33 @@ public class SQLIntrospector
         {
             Column attr = buildColumn(dialect, field, cls, classIndex);
             if (attr != null) model.addColumn(attr);
+        }
+        // build partitioning
+        this.buildPartitioning(dialect, cls, classIndex, model);
+    }
+    
+    protected void buildPartitioning(SQLDialect dialect, Class<?> cls, int classIndex, Table model)
+    {
+        SQLPartitioning partitioning = cls.getAnnotation(SQLPartitioning.class);
+        if (partitioning != null && partitioning.value().length > 0)
+        {
+            Partitioning parting = new Partitioning();
+            for (SQLPartition partition : partitioning.value())
+            {   
+                Partition part = new Partition();
+                part.setMode(partition.mode());
+                for (String column : partition.on())
+                {
+                    Column col = model.getColumns().stream().filter(c -> column.equals(c.getName())).findAny().orElse(null);
+                    if (col == null)
+                        throw new RuntimeException("Cannot partition on " + column + " since it does not exist, for class " + cls.getSimpleName());
+                    part.getOn().add(col);
+                }
+                part.setIndexOn(partition.indexOn());
+                part.setIndexOnUsing(partition.indexOnUsing());
+                parting.getPartitions().add(part);
+            }
+            model.setPartitioning(parting);
         }
     }
 
@@ -272,11 +307,18 @@ public class SQLIntrospector
         }
         return null;
     }
+    
+    protected PrimaryKey buildPrimaryKey(SQLDialect dialect, Class<?> cls, Table table)
+    {
+        PrimaryKey pkey = new PrimaryKey(table.getName() + "_pk");
+        this.buildPrimaryKey(dialect, cls, table, pkey);
+        return pkey.getColumns().isEmpty() ? null : pkey;
+    }
 
-    protected void buildPrimaryKey(SQLDialect dialect, Class<?> cls, Table table)
+    protected void buildPrimaryKey(SQLDialect dialect, Class<?> cls, Table table, PrimaryKey pkey)
     {
         if (cls == null) return;
-        this.buildPrimaryKey(dialect, cls.getSuperclass(), table);
+        this.buildPrimaryKey(dialect, cls.getSuperclass(), table, pkey);
         //
         for (Field field : cls.getDeclaredFields())
         {
@@ -286,7 +328,7 @@ public class SQLIntrospector
                 Column column = table.findColumn(colName);
                 if (column != null)
                 {
-                    table.getPrimaryKey().addColumn(column);
+                    pkey.addColumn(column);
                 }
             }
         }
@@ -377,14 +419,7 @@ public class SQLIntrospector
             {
                 Unique u = new Unique();
                 // name
-                if (Util.isEmpty(unq.name()))
-                {
-                    u.setName(table.getName() + "_" + getColumnName(field) + "_unq");
-                }
-                else
-                {
-                    u.setName(table.getName() + "_" + unq.name());
-                }
+                u.setName(Util.isEmpty(unq.name()) ? table.getName() + "_" + getColumnName(field) + "_unq" : table.getName() + "_" + unq.name());
                 // columns
                 if (unq.columns().length == 0)
                 {
@@ -401,6 +436,70 @@ public class SQLIntrospector
                     }
                 }
                 table.addUnique(u);
+            }
+        }
+    }
+    
+    protected void buildIndexes(SQLDialect dialect, Class<?> cls, Table table)
+    {
+        if (cls == null) return;
+        this.buildIndexes(dialect, cls.getSuperclass(), table);
+        // Indexes on the table
+        List<SQLIndex> tblIdx = new LinkedList<SQLIndex>();
+        if (cls.getAnnotation(SQLIndex.class) != null)
+        {
+            tblIdx.add(cls.getAnnotation(SQLIndex.class));
+        }
+        if (cls.getAnnotation(SQLIndexes.class) != null)
+        {
+            for (SQLIndex idx : cls.getAnnotation(SQLIndexes.class).value())
+            {
+                tblIdx.add(idx);
+            }
+        }
+        for (SQLIndex idx : tblIdx)
+        {
+            if (Util.isEmpty(idx.name())) throw new RuntimeException("No name given for index on table " + table.getName() + ". Caused by " + cls);
+            if (idx.columns().length == 0) throw new RuntimeException("No columns given for indxex on table " + table.getName() + ". Caused by " + cls);
+            //
+            Index i = new Index();
+            i.setName(table.getName() + "_" + idx.name());
+            if (! Util.isEmpty(idx.using())) i.setUsing(idx.using());
+            if (! Util.isEmpty(idx.expression())) i.setExpression(idx.expression());
+            i.setSince(new Version(idx.since()));
+            for (String colName : idx.columns())
+            {
+                Column col = table.findColumn(colName);
+                if (col == null) throw new RuntimeException("The column " + colName + " does not exist on table " + table.getName() + ".  Caused by index " + idx.name() + " on" + cls);
+                i.addColumn(col);
+            }
+            table.addIndex(i);
+        }
+        // Indexes on fields
+        for (Field field : cls.getDeclaredFields())
+        {
+            SQLIndex idx = field.getAnnotation(SQLIndex.class);
+            if (idx != null)
+            {
+                Index i = new Index();
+                // name
+                i.setName( Util.isEmpty(idx.name()) ? table.getName() + "_" + getColumnName(field) + "_idx" : table.getName() + "_" + idx.name());
+                // columns
+                if (idx.columns().length == 0)
+                {
+                    Column col = table.findColumn(getColumnName(field));
+                    i.addColumn(col);
+                }
+                else
+                {
+                    for (String colName : idx.columns())
+                    {
+                        Column col = table.findColumn(colName);
+                        if (col == null) throw new RuntimeException("The column " + colName + " does not exist on table " + table.getName() + ".  Caused by index on " + field);
+                        i.addColumn(col);
+                    }
+                }
+                table.addIndex(i);
             }
         }
     }
@@ -457,17 +556,6 @@ public class SQLIntrospector
     {
         return List.class == method.getReturnType();
     }
-
-    /*public static Class<?> functionReturnType(Method method)
-    {
-        if (returnsList(method))
-        {
-            Class<?> type = listOf(method);
-            if (type == null) throw new RuntimeException("The method " + method + " returns a list, you must annotate it with ListOf().");
-            return type;
-        }
-        return method.getReturnType();
-    }*/
     
     @SuppressWarnings("unchecked")
     public static <T extends Annotation> T getParameterAnnotation(Annotation[] annotations, Class<T> type)
