@@ -180,8 +180,7 @@ public class PGSQLDialect extends SQLDialect
     {
         Partitioning parting = table.getPartitioning();
         Partition upperPart = parting.getPartitions().get(0);
-        Partition lowerPart = parting.getPartitions().get(parting.getPartitions().size() - 1);
-        boolean parentPrimaryKey = table.getPrimaryKey() != null && table.getPrimaryKey().findColumn(lowerPart.getOn().get(0).getName()) != null;
+        boolean parentPrimaryKey = table.getPrimaryKey() != null && parting.isParentPrimaryKey(table.getPrimaryKey());
         //
         SQLScript s = new SQLScript();
         SQLCommand to = s.command();
@@ -238,8 +237,7 @@ public class PGSQLDialect extends SQLDialect
     {
         SQLScript s = new SQLScript();
         Partitioning parting = table.getPartitioning();
-        Partition lowerPart = parting.getPartitions().get(parting.getPartitions().size() - 1);
-        boolean parentPrimaryKey = table.getPrimaryKey() != null && table.getPrimaryKey().findColumn(lowerPart.getOn().get(0).getName()) != null;
+        boolean parentPrimaryKey = table.getPrimaryKey() != null && parting.isParentPrimaryKey(table.getPrimaryKey());
         for (int i = 0; i < parting.getPartitions().size(); i++)
         {
             Partition part = parting.getPartitions().get(i);
@@ -319,7 +317,7 @@ public class PGSQLDialect extends SQLDialect
             if ((! parentPrimaryKey) && table.getPrimaryKey() != null)
             {
                 to.write("  -- Create primary key").writeln();
-                to.write("  v_con_name := quote_ident('").writeid(table.getPrimaryKey().getName()).write("_' || p_suffix);").writeln();
+                to.write("  v_con_name := quote_ident('").write(table.getPrimaryKey().getName()).write("_' || p_suffix);").writeln();
                 to.write("  EXECUTE 'ALTER TABLE ' || v_tbl_name || ").writeln();
                 to.write("          ' ADD CONSTRAINT ' || v_con_name  ||").writeln();
                 to.write("          ' PRIMARY KEY (").writeColumnNameList(table.getPrimaryKey().getColumns()).write(");';").writeln();

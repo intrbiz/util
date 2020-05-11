@@ -21,4 +21,17 @@ public class Partitioning
     {
         this.partitions = partitions;
     }
+    
+    public boolean isParentPrimaryKey(PrimaryKey pk)
+    {
+        for (Partition part : this.partitions)
+        {
+            for (Column col : part.getOn())
+            {
+                if (pk.findColumn(col.getName()) == null)
+                    return false;
+            }
+        }
+        return true;
+    }
 }
