@@ -78,7 +78,6 @@ public class IntrbizPackaging extends AbstractMojo
 
     /**
      * @parameter
-     * @required
      * @readonly
      */
     private String appClass;
@@ -253,7 +252,10 @@ public class IntrbizPackaging extends AbstractMojo
         // the main class
         mainAttributes.putValue("Main-Class", "com.intrbiz.util.IntrbizBootstrap");
         // the app class
-        mainAttributes.putValue("App-Class", this.appClass);
+        if (this.appClass != null)
+        {
+            mainAttributes.putValue("App-Class", this.appClass);
+        }
         return mf;
     }
 
